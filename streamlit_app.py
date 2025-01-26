@@ -12,6 +12,11 @@ class DashboardTecnicos:
         self.pasta_dados = "Dados_excel"
         self.cached_file = None
         
+        # Verifica se a pasta existe
+        if not os.path.exists(self.pasta_dados):
+            os.makedirs(self.pasta_dados)
+            st.warning(f"Pasta {self.pasta_dados} foi criada. Por favor, adicione seus arquivos Excel/CSV nela.")
+        
         # Colunas que realmente vamos usar
         self.colunas_necessarias = [
             'TECNICO', 'DATA_TOA', 'CONTRATO', 'STATUS', 
@@ -34,9 +39,20 @@ class DashboardTecnicos:
         Lista todos os arquivos Excel e CSV na pasta Dados_excel
         """
         try:
+            if not os.path.exists(self.pasta_dados):
+                st.error(f"Pasta {self.pasta_dados} não encontrada")
+                return []
+            
             arquivos = [f for f in os.listdir(self.pasta_dados) 
                        if f.endswith(('.xlsx', '.csv'))]
-            return arquivos
+            
+            if not arquivos:
+                st.warning(f"Nenhum arquivo Excel/CSV encontrado em {self.pasta_dados}")
+                st.info("Formatos suportados: .xlsx, .csv")
+                return []
+            
+            return sorted(arquivos)  # Retorna arquivos em ordem alfabética
+        
         except Exception as e:
             st.error(f"Erro ao listar arquivos: {e}")
             return []
@@ -109,6 +125,9 @@ class DashboardTecnicos:
         Carrega e processa os dados de forma otimizada
         """
         try:
+            if "Relatorio_Financeiro" not in nome_arquivo:
+                st.warning("⚠️ Atenção: O arquivo não parece ser um Relatório Financeiro padrão")
+            
             if self.cached_file == nome_arquivo and self.dados is not None:
                 return True
                 
@@ -117,27 +136,73 @@ class DashboardTecnicos:
                 del self.dados
                 gc.collect()
                 
-            # Carrega dados com otimizações
-            self.dados = self.carregar_dados_cache_alt(
-                self.pasta_dados, 
-                nome_arquivo, 
-                self.colunas_necessarias,
-                self.dtypes
-            )
-            self.cached_file = nome_arquivo
-            
-            # Otimiza processamento de datas
-            if 'DATA_TOA' in self.dados.columns:
-                self.dados['DATA_TOA'] = pd.to_datetime(
-                    self.dados['DATA_TOA'], 
-                    dayfirst=True,  # Especifica que o dia vem primeiro
-                    errors='coerce'
+            # Adiciona validações específicas para o Relatório Financeiro
+            try:
+                self.dados = self.carregar_dados_cache_alt(
+                    self.pasta_dados, 
+                    nome_arquivo, 
+                    self.colunas_necessarias,
+                    self.dtypes
                 )
-            
-            # Otimiza memória
-            self.dados = self.dados.copy()
-            
-            return True
+                
+                # Validações específicas do Relatório Financeiro
+                validacoes = {
+                    'VALOR TÉCNICO': lambda x: x >= 0,
+                    'VALOR EMPRESA': lambda x: x >= 0,
+                    'STATUS': lambda x: x.notna(),
+                    'TECNICO': lambda x: x.notna(),
+                    'BASE': lambda x: x.notna()
+                }
+                
+                for coluna, validacao in validacoes.items():
+                    invalidos = ~self.dados[coluna].apply(validacao)
+                    if invalidos.any():
+                        st.warning(f"⚠️ Encontrados {invalidos.sum()} registros com {coluna} inválidos")
+                
+                # Verifica valores zerados
+                valores_zerados = (self.dados['VALOR TÉCNICO'] == 0).sum()
+                if valores_zerados > 0:
+                    st.warning(f"⚠️ Existem {valores_zerados} registros com valor zero")
+                
+                self.cached_file = nome_arquivo
+                
+                # Otimiza processamento de datas
+                if 'DATA_TOA' in self.dados.columns:
+                    # Tenta diferentes formatos de data comuns no Brasil
+                    try:
+                        self.dados['DATA_TOA'] = pd.to_datetime(
+                            self.dados['DATA_TOA'],
+                            format='%d/%m/%Y',
+                            errors='coerce'
+                        )
+                    except:
+                        try:
+                            self.dados['DATA_TOA'] = pd.to_datetime(
+                                self.dados['DATA_TOA'],
+                                format='%d/%m/%Y %H:%M:%S',
+                                errors='coerce'
+                            )
+                        except:
+                            # Se nenhum formato específico funcionar, usa dayfirst
+                            self.dados['DATA_TOA'] = pd.to_datetime(
+                                self.dados['DATA_TOA'],
+                                dayfirst=True,
+                                errors='coerce'
+                            )
+                    
+                    # Verifica se há datas inválidas
+                    datas_invalidas = self.dados['DATA_TOA'].isna().sum()
+                    if datas_invalidas > 0:
+                        st.warning(f"Atenção: {datas_invalidas} datas não puderam ser processadas")
+                
+                # Otimiza memória
+                self.dados = self.dados.copy()
+                
+                return True
+                
+            except Exception as e:
+                st.error(f"Erro ao processar o Relatório Financeiro: {e}")
+                return False
             
         except Exception as e:
             st.error(f"Erro ao carregar arquivo: {e}")
@@ -166,6 +231,32 @@ class DashboardTecnicos:
             with col4:
                 valor_total = self.dados['VALOR EMPRESA'].sum()
                 st.metric("Valor Total", f"R$ {valor_total:,.2f}")
+            
+            # Adiciona métricas financeiras
+            st.write("### 📊 Métricas Financeiras")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                valor_medio_tecnico = self.dados['VALOR TÉCNICO'].mean()
+                st.metric(
+                    "Valor Médio por Técnico", 
+                    f"R$ {valor_medio_tecnico:,.2f}"
+                )
+                
+            with col2:
+                valor_medio_empresa = self.dados['VALOR EMPRESA'].mean()
+                st.metric(
+                    "Valor Médio por Empresa",
+                    f"R$ {valor_medio_empresa:,.2f}"
+                )
+                
+            with col3:
+                margem = ((self.dados['VALOR EMPRESA'].sum() - self.dados['VALOR TÉCNICO'].sum()) 
+                         / self.dados['VALOR EMPRESA'].sum() * 100)
+                st.metric(
+                    "Margem Média",
+                    f"{margem:.1f}%"
+                )
 
     def analisar_produtividade(self):
         if self.dados is None:
@@ -565,8 +656,18 @@ def main():
         
         if not arquivos:
             st.error("Nenhum arquivo encontrado na pasta Dados_excel")
+            st.info("Por favor, adicione seus arquivos Excel/CSV na pasta Dados_excel")
         else:
-            arquivo = arquivos[0]
+            # Permite selecionar o arquivo se houver mais de um
+            if len(arquivos) > 1:
+                arquivo = st.selectbox(
+                    "Selecione o arquivo para análise:",
+                    arquivos,
+                    format_func=lambda x: f"📄 {x}"
+                )
+            else:
+                arquivo = arquivos[0]
+                st.info(f"Arquivo carregado: {arquivo}")
             
             if dashboard.carregar_dados(arquivo):
                 if selected == "Produtividade dos Técnicos":
