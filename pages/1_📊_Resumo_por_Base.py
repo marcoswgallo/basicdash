@@ -226,7 +226,7 @@ def main():
                 )
             
             # Mostra as tabelas com os dados filtrados
-            dashboard.mostrar_tabela_bases(dados_filtrados)
+            dashboard.mostrar_tabela_bases(dados_filtrados, grupo_selecionado)
             
             # Continua com as análises...
             with st.spinner("Gerando insights..."):

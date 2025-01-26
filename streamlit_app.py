@@ -554,7 +554,7 @@ class DashboardTecnicos:
             st.write("Colunas disponíveis:", list(self.dados.columns))
             st.write("Amostra da coluna de valor:", self.dados['VALOR TÉCNICO'].head())
 
-    def mostrar_tabela_bases(self, dados_filtrados):
+    def mostrar_tabela_bases(self, dados_filtrados, grupo_selecionado='Todos'):
         """
         Mostra os dados em formato de tabela similar ao Excel
         """
@@ -564,12 +564,17 @@ class DashboardTecnicos:
                 st.warning("Não há dados para gerar as tabelas com os filtros atuais")
                 return
 
-            # Remove bases com valores zerados
+            # Remove bases com valores zerados e filtra por grupo
             dados_agrupados = dados_filtrados.groupby('BASE').agg({
                 'VALOR EMPRESA': 'sum',
                 'CONTRATO': 'count',
                 'TECNICO': 'nunique',
+                'GRUPO': 'first'  # Pega o grupo de cada base
             }).reset_index()
+            
+            # Filtra apenas bases do grupo selecionado
+            if grupo_selecionado != 'Todos':
+                dados_agrupados = dados_agrupados[dados_agrupados['GRUPO'] == grupo_selecionado]
             
             # Filtra apenas bases com valores ou contratos
             dados_agrupados = dados_agrupados[
@@ -577,6 +582,9 @@ class DashboardTecnicos:
                 (dados_agrupados['CONTRATO'] > 0) |
                 (dados_agrupados['TECNICO'] > 0)
             ]
+
+            # Remove a coluna GRUPO pois não será exibida
+            dados_agrupados = dados_agrupados.drop('GRUPO', axis=1)
 
             # Verifica se há resultados após o agrupamento
             if len(dados_agrupados) == 0:
