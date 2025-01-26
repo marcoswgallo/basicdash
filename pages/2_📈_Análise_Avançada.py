@@ -9,10 +9,6 @@ from datetime import datetime, timedelta, date
 def analisar_tempo_execucao(dados):
     st.subheader("⏱️ Análise de Tempo de Execução")
     
-    # Converte tempo para minutos
-    dados['TEMPO_EXECUCAO'] = pd.to_datetime(dados['HORA_FIM']) - pd.to_datetime(dados['HORA_INICIO'])
-    dados['TEMPO_MINUTOS'] = dados['TEMPO_EXECUCAO'].dt.total_seconds() / 60
-    
     col1, col2 = st.columns(2)
     
     with col1:
@@ -169,24 +165,15 @@ def preparar_dados(dados):
         if 'DATA_TOA' in dados.columns:
             dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
         
-        # Calcula tempo de execução usando as colunas corretas
+        # Verifica se já temos a coluna TEMPO_MINUTOS
         if 'TEMPO_MINUTOS' not in dados.columns:
-            try:
-                # Converte strings de hora para datetime
-                dados['HORA_INICIO'] = pd.to_datetime(dados['HORA INICIO'], format='%H:%M:%S').dt.time
-                dados['HORA_FIM'] = pd.to_datetime(dados['HORA FIM'], format='%H:%M:%S').dt.time
-                
-                # Calcula a diferença em minutos
-                dados['TEMPO_MINUTOS'] = dados.apply(
-                    lambda row: (
-                        (datetime.combine(date.today(), row['HORA_FIM']) - 
-                         datetime.combine(date.today(), row['HORA_INICIO']))
-                    ).total_seconds() / 60 if pd.notnull(row['HORA_FIM']) and pd.notnull(row['HORA_INICIO']) else 0,
-                    axis=1
-                )
-            except Exception as e:
-                st.warning(f"Erro ao calcular tempo: {str(e)}. Usando valor padrão.")
-                dados['TEMPO_MINUTOS'] = 60  # valor padrão de 1 hora
+            st.warning("Coluna TEMPO_MINUTOS não encontrada. Usando valor padrão.")
+            dados['TEMPO_MINUTOS'] = 60  # valor padrão de 1 hora
+        
+        # Garante que valores monetários sejam numéricos
+        for col in ['VALOR TÉCNICO', 'VALOR EMPRESA']:
+            if col in dados.columns:
+                dados[col] = pd.to_numeric(dados[col].astype(str).str.replace('R$', '').str.replace(',', '.'), errors='coerce')
         
         return dados
     
