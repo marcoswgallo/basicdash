@@ -214,51 +214,67 @@ def main():
         # Filtros
         st.sidebar.title("Filtros")
         
-        # Converte datas para datetime
-        dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA']).dt.date
-        datas_disponiveis = sorted(dados['DATA_TOA'].unique())
-        
-        # Filtro de data
-        data_min = st.sidebar.date_input(
-            "Data Inicial",
-            value=datas_disponiveis[0],
-            min_value=min(datas_disponiveis),
-            max_value=max(datas_disponiveis)
-        )
-        
-        data_max = st.sidebar.date_input(
-            "Data Final",
-            value=datas_disponiveis[-1],
-            min_value=min(datas_disponiveis),
-            max_value=max(datas_disponiveis)
-        )
-        
-        # Filtro de grupo/base
-        grupo = st.sidebar.selectbox("Grupo", ['Todos'] + sorted(dados['GRUPO'].unique().tolist()))
-        base = st.sidebar.selectbox("Base", ['Todas'] + sorted(dados['BASE'].unique().tolist()))
-        
-        # Aplica filtros
-        mask = (dados['DATA_TOA'] >= data_min) & (dados['DATA_TOA'] <= data_max)
-               
-        if grupo != 'Todos':
-            mask &= dados['GRUPO'] == grupo
+        try:
+            # Converte datas para datetime
+            dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
+            data_min_default = dados['DATA_TOA'].min().date()
+            data_max_default = dados['DATA_TOA'].max().date()
             
-        if base != 'Todas':
-            mask &= dados['BASE'] == base
+            # Filtro de data
+            data_min = st.sidebar.date_input(
+                "Data Inicial",
+                value=data_min_default,
+                min_value=data_min_default,
+                max_value=data_max_default
+            )
             
-        dados_filtrados = dados[mask].copy()
-        
-        if len(dados_filtrados) == 0:
-            st.warning("Nenhum dado encontrado para os filtros selecionados")
-            return
+            data_max = st.sidebar.date_input(
+                "Data Final",
+                value=data_max_default,
+                min_value=data_min_default,
+                max_value=data_max_default
+            )
             
-        # Mostra análises
-        mostrar_kpis(dados_filtrados)
-        analisar_tempo_execucao(dados_filtrados)
-        analisar_produtividade_regional(dados_filtrados)
-        analisar_tipo_residencia(dados_filtrados)
-        analisar_horarios(dados_filtrados)
-        analisar_eficiencia_tecnicos(dados_filtrados)
+            # Filtro de grupo/base
+            grupos_disponiveis = ['Todos'] + sorted(dados['GRUPO'].unique().tolist())
+            grupo = st.sidebar.selectbox("Grupo", grupos_disponiveis)
+            
+            # Filtra bases baseado no grupo selecionado
+            if grupo != 'Todos':
+                bases_filtradas = dados[dados['GRUPO'] == grupo]['BASE'].unique()
+            else:
+                bases_filtradas = dados['BASE'].unique()
+            
+            bases_disponiveis = ['Todas'] + sorted(bases_filtradas.tolist())
+            base = st.sidebar.selectbox("Base", bases_disponiveis)
+            
+            # Aplica filtros
+            mask = (dados['DATA_TOA'].dt.date >= data_min) & \
+                   (dados['DATA_TOA'].dt.date <= data_max)
+            
+            if grupo != 'Todos':
+                mask &= dados['GRUPO'] == grupo
+                
+            if base != 'Todas':
+                mask &= dados['BASE'] == base
+                
+            dados_filtrados = dados[mask].copy()
+            
+            if len(dados_filtrados) == 0:
+                st.warning("Nenhum dado encontrado para os filtros selecionados")
+                return
+                
+            # Mostra análises
+            mostrar_kpis(dados_filtrados)
+            analisar_tempo_execucao(dados_filtrados)
+            analisar_produtividade_regional(dados_filtrados)
+            analisar_tipo_residencia(dados_filtrados)
+            analisar_horarios(dados_filtrados)
+            analisar_eficiencia_tecnicos(dados_filtrados)
+            
+        except Exception as e:
+            st.error(f"Erro ao processar os dados: {str(e)}")
+            st.error("Por favor, verifique o formato das datas nos dados")
 
 if __name__ == "__main__":
     main() 
