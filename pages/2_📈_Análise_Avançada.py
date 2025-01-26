@@ -157,6 +157,18 @@ def analisar_eficiencia_tecnicos(dados):
     
     st.plotly_chart(fig, use_container_width=True)
 
+def preparar_dados(dados):
+    """Prepara os dados para análise, criando colunas calculadas"""
+    dados = dados.copy()
+    
+    # Converte e calcula tempos
+    dados['HORA_INICIO'] = pd.to_datetime(dados['HORA_INICIO'])
+    dados['HORA_FIM'] = pd.to_datetime(dados['HORA_FIM'])
+    dados['TEMPO_EXECUCAO'] = dados['HORA_FIM'] - dados['HORA_INICIO']
+    dados['TEMPO_MINUTOS'] = dados['TEMPO_EXECUCAO'].dt.total_seconds() / 60
+    
+    return dados
+
 def mostrar_kpis(dados):
     st.subheader("📊 KPIs Principais")
     
@@ -209,12 +221,13 @@ def main():
     arquivo = arquivos[0]
     
     if dashboard.carregar_dados(arquivo):
-        dados = dashboard.dados.copy()
-        
-        # Filtros
-        st.sidebar.title("Filtros")
-        
         try:
+            # Carrega e prepara os dados
+            dados = preparar_dados(dashboard.dados)
+            
+            # Filtros
+            st.sidebar.title("Filtros")
+            
             # Converte datas para datetime
             dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
             data_min_default = dados['DATA_TOA'].min().date()
@@ -275,6 +288,7 @@ def main():
         except Exception as e:
             st.error(f"Erro ao processar os dados: {str(e)}")
             st.error("Por favor, verifique o formato das datas nos dados")
+            st.error("Colunas disponíveis: " + ", ".join(dados.columns))
 
 if __name__ == "__main__":
     main() 
