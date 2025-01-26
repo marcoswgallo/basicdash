@@ -81,9 +81,8 @@ class DashboardTecnicos:
                 df[coluna] = (pd.to_numeric(
                     df[coluna]
                     .astype(str)
-                    .str.replace('R$', '')
-                    .str.replace('.', '')
-                    .str.replace(',', '.')
+                    .str.replace(r'[R$.]', '', regex=True)  # Remove R$ e pontos
+                    .str.replace(',', '.', regex=False)     # Troca vírgula por ponto
                     .str.strip(),
                     errors='coerce'
                 ).fillna(0))
