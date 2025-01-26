@@ -564,53 +564,66 @@ class DashboardTecnicos:
                 st.warning("Não há dados para gerar as tabelas com os filtros atuais")
                 return
 
-            # Agrupa os dados por BASE
-            tabela_base = dados_filtrados.groupby('BASE', as_index=False).agg({
+            # Remove bases com valores zerados
+            dados_agrupados = dados_filtrados.groupby('BASE').agg({
                 'VALOR EMPRESA': 'sum',
                 'CONTRATO': 'count',
                 'TECNICO': 'nunique',
-            })
+            }).reset_index()
+            
+            # Filtra apenas bases com valores ou contratos
+            dados_agrupados = dados_agrupados[
+                (dados_agrupados['VALOR EMPRESA'] > 0) | 
+                (dados_agrupados['CONTRATO'] > 0) |
+                (dados_agrupados['TECNICO'] > 0)
+            ]
 
             # Verifica se há resultados após o agrupamento
-            if len(tabela_base) == 0:
-                st.warning("Não há dados agrupados para gerar as tabelas")
+            if len(dados_agrupados) == 0:
+                st.warning("Não há dados ativos para gerar as tabelas")
                 return
 
             # Calcula VL EQ (Valor por Equipe)
-            tabela_base['VL EQ'] = tabela_base['VALOR EMPRESA'] / tabela_base['TECNICO']
+            dados_agrupados['VL EQ'] = dados_agrupados.apply(
+                lambda x: x['VALOR EMPRESA'] / x['TECNICO'] if x['TECNICO'] > 0 else 0, 
+                axis=1
+            )
             
             # Calcula EQ_CTTS (Contratos por Equipe)
-            tabela_base['EQ_CTTS'] = (tabela_base['CONTRATO'] / tabela_base['TECNICO']).round(1)
+            dados_agrupados['EQ_CTTS'] = dados_agrupados.apply(
+                lambda x: (x['CONTRATO'] / x['TECNICO']).round(1) if x['TECNICO'] > 0 else 0,
+                axis=1
+            )
 
             # Renomeia as colunas
-            tabela_base.columns = ['BASE', 'VALOR', 'CONTRATOS', 'EQUIPES', 'VL EQ', 'EQ_CTTS']
+            dados_agrupados.columns = ['BASE', 'VALOR', 'CONTRATOS', 'EQUIPES', 'VL EQ', 'EQ_CTTS']
 
             # Ordena por BASE
-            tabela_base = tabela_base.sort_values('BASE')
+            dados_agrupados = dados_agrupados.sort_values('BASE')
 
             # Adiciona linha de total
             total = pd.DataFrame({
                 'BASE': ['Total Geral'],
-                'VALOR': [tabela_base['VALOR'].sum()],
-                'CONTRATOS': [tabela_base['CONTRATOS'].sum()],
-                'EQUIPES': [tabela_base['EQUIPES'].sum()],
-                'VL EQ': [tabela_base['VALOR'].sum() / tabela_base['EQUIPES'].sum()],
-                'EQ_CTTS': [(tabela_base['CONTRATOS'].sum() / tabela_base['EQUIPES'].sum()).round(1)]
+                'VALOR': [dados_agrupados['VALOR'].sum()],
+                'CONTRATOS': [dados_agrupados['CONTRATOS'].sum()],
+                'EQUIPES': [dados_agrupados['EQUIPES'].sum()],
+                'VL EQ': [dados_agrupados['VALOR'].sum() / dados_agrupados['EQUIPES'].sum() if dados_agrupados['EQUIPES'].sum() > 0 else 0],
+                'EQ_CTTS': [(dados_agrupados['CONTRATOS'].sum() / dados_agrupados['EQUIPES'].sum()).round(1) if dados_agrupados['EQUIPES'].sum() > 0 else 0]
             })
 
             # Concatena e reseta o índice
-            tabela_base = pd.concat([tabela_base, total], ignore_index=True)
+            dados_agrupados = pd.concat([dados_agrupados, total], ignore_index=True)
 
             # Formata a tabela
             st.write("### Resumo por Base")
             st.dataframe(
-                tabela_base.style
+                dados_agrupados.style
                 .format({
                     'VALOR': 'R$ {:,.2f}',
-                    'VL EQ': 'R$ {:,.2f}',
+                    'VL EQ': lambda x: 'R$ {:,.2f}'.format(x) if x > 0 else '-',
                     'CONTRATOS': '{:,.0f}',
                     'EQUIPES': '{:,.0f}',
-                    'EQ_CTTS': '{:,.1f}'
+                    'EQ_CTTS': lambda x: '{:,.1f}'.format(x) if x > 0 else '-'
                 })
                 .set_properties(**{
                     'background-color': '#262730',
@@ -623,63 +636,74 @@ class DashboardTecnicos:
                 ])
             )
 
-            # Para a tabela de desconexão
-            desconexao = dados_filtrados[
-                dados_filtrados['TIPO DE SERVIÇO'].str.contains('DESCONEX', case=False, na=False)
-            ]
+            # Mesma lógica para a tabela de desconexão
+            if 'TIPO DE SERVIÇO' in dados_filtrados.columns:
+                desconexao = dados_filtrados[
+                    dados_filtrados['TIPO DE SERVIÇO'].str.contains('DESCONEX', case=False, na=False)
+                ]
 
-            # Verifica se há dados de desconexão
-            if len(desconexao) == 0:
-                st.info("Não há dados de desconexão para os filtros selecionados")
-                return
+                if len(desconexao) > 0:
+                    desconexao = desconexao.groupby('BASE').agg({
+                        'VALOR EMPRESA': 'sum',
+                        'CONTRATO': 'count',
+                        'TECNICO': 'nunique'
+                    }).reset_index()
 
-            desconexao = desconexao.groupby('BASE', as_index=False).agg({
-                'VALOR EMPRESA': 'sum',
-                'CONTRATO': 'count',
-                'TECNICO': 'nunique'
-            })
+                    # Filtra apenas bases com valores ou contratos
+                    desconexao = desconexao[
+                        (desconexao['VALOR EMPRESA'] > 0) | 
+                        (desconexao['CONTRATO'] > 0) |
+                        (desconexao['TECNICO'] > 0)
+                    ]
 
-            # Calcula métricas adicionais
-            desconexao['VL EQ'] = desconexao['VALOR EMPRESA'] / desconexao['TECNICO']
-            desconexao['EQ_CTTS'] = (desconexao['CONTRATO'] / desconexao['TECNICO']).round(1)
-            
-            # Adiciona total
-            total_desc = pd.DataFrame({
-                'BASE': ['Total Geral'],
-                'VALOR EMPRESA': [desconexao['VALOR EMPRESA'].sum()],
-                'CONTRATO': [desconexao['CONTRATO'].sum()],
-                'TECNICO': [desconexao['TECNICO'].sum()],
-                'VL EQ': [desconexao['VALOR EMPRESA'].sum() / desconexao['TECNICO'].sum()],
-                'EQ_CTTS': [(desconexao['CONTRATO'].sum() / desconexao['TECNICO'].sum()).round(1)]
-            })
+                    if len(desconexao) > 0:
+                        # Calcula métricas adicionais
+                        desconexao['VL EQ'] = desconexao.apply(
+                            lambda x: x['VALOR EMPRESA'] / x['TECNICO'] if x['TECNICO'] > 0 else 0,
+                            axis=1
+                        )
+                        desconexao['EQ_CTTS'] = desconexao.apply(
+                            lambda x: (x['CONTRATO'] / x['TECNICO']).round(1) if x['TECNICO'] > 0 else 0,
+                            axis=1
+                        )
 
-            # Concatena e reseta o índice
-            desconexao = pd.concat([desconexao, total_desc], ignore_index=True)
+                        # Adiciona total
+                        total_desc = pd.DataFrame({
+                            'BASE': ['Total Geral'],
+                            'VALOR EMPRESA': [desconexao['VALOR EMPRESA'].sum()],
+                            'CONTRATO': [desconexao['CONTRATO'].sum()],
+                            'TECNICO': [desconexao['TECNICO'].sum()],
+                            'VL EQ': [desconexao['VALOR EMPRESA'].sum() / desconexao['TECNICO'].sum() if desconexao['TECNICO'].sum() > 0 else 0],
+                            'EQ_CTTS': [(desconexao['CONTRATO'].sum() / desconexao['TECNICO'].sum()).round(1) if desconexao['TECNICO'].sum() > 0 else 0]
+                        })
 
-            # Mostra a tabela de desconexão
-            st.write("### Desconexão")
-            st.dataframe(
-                desconexao.style
-                .format({
-                    'VALOR EMPRESA': 'R$ {:,.2f}',
-                    'VL EQ': 'R$ {:,.2f}',
-                    'CONTRATO': '{:,.0f}',
-                    'TECNICO': '{:,.0f}',
-                    'EQ_CTTS': '{:,.1f}'
-                })
-                .set_properties(**{
-                    'background-color': '#262730',
-                    'color': 'white',
-                    'border': '1px solid gray'
-                })
-                .set_table_styles([
-                    {'selector': 'th', 'props': [('background-color', '#1E1E1E'), ('color', 'white')]},
-                    {'selector': 'tr:last-child', 'props': [('background-color', '#1E1E1E'), ('font-weight', 'bold')]}
-                ])
-            )
+                        desconexao = pd.concat([desconexao, total_desc], ignore_index=True)
+
+                        st.write("### Desconexão")
+                        st.dataframe(
+                            desconexao.style
+                            .format({
+                                'VALOR EMPRESA': 'R$ {:,.2f}',
+                                'VL EQ': lambda x: 'R$ {:,.2f}'.format(x) if x > 0 else '-',
+                                'CONTRATO': '{:,.0f}',
+                                'TECNICO': '{:,.0f}',
+                                'EQ_CTTS': lambda x: '{:,.1f}'.format(x) if x > 0 else '-'
+                            })
+                            .set_properties(**{
+                                'background-color': '#262730',
+                                'color': 'white',
+                                'border': '1px solid gray'
+                            })
+                            .set_table_styles([
+                                {'selector': 'th', 'props': [('background-color', '#1E1E1E'), ('color', 'white')]},
+                                {'selector': 'tr:last-child', 'props': [('background-color', '#1E1E1E'), ('font-weight', 'bold')]}
+                            ])
+                        )
+                    else:
+                        st.info("Não há dados de desconexão ativos para os filtros selecionados")
+
         except Exception as e:
             st.error(f"Erro ao gerar tabelas: {str(e)}")
-            # Adiciona mais detalhes para debug
             st.error(f"Quantidade de dados filtrados: {len(dados_filtrados)}")
             st.error(f"Colunas disponíveis: {list(dados_filtrados.columns)}")
 
