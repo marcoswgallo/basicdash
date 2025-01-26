@@ -445,105 +445,110 @@ class DashboardTecnicos:
         """
         Mostra os dados em formato de tabela similar ao Excel
         """
-        # Agrupa os dados por BASE
-        tabela_base = dados_filtrados.groupby('BASE').agg({
-            'VALOR EMPRESA': 'sum',
-            'CONTRATO': 'count',
-            'TECNICO': 'nunique',
-        }).reset_index()
-
-        # Calcula VL EQ (Valor por Equipe)
-        tabela_base['VL EQ'] = tabela_base['VALOR EMPRESA'] / tabela_base['TECNICO']
-        
-        # Calcula EQ_CTTS (Contratos por Equipe)
-        tabela_base['EQ_CTTS'] = (tabela_base['CONTRATO'] / tabela_base['TECNICO']).round(1)
-
-        # Renomeia as colunas
-        tabela_base.columns = ['BASE', 'VALOR', 'CONTRATOS', 'EQUIPES', 'VL EQ', 'EQ_CTTS']
-
-        # Ordena por BASE
-        tabela_base = tabela_base.sort_values('BASE')
-
-        # Adiciona linha de total
-        total = pd.DataFrame({
-            'BASE': ['Total Geral'],
-            'VALOR': [tabela_base['VALOR'].sum()],
-            'CONTRATOS': [tabela_base['CONTRATOS'].sum()],
-            'EQUIPES': [tabela_base['EQUIPES'].sum()],
-            'VL EQ': [tabela_base['VALOR'].sum() / tabela_base['EQUIPES'].sum()],
-            'EQ_CTTS': [(tabela_base['CONTRATOS'].sum() / tabela_base['EQUIPES'].sum()).round(1)]
-        })
-
-        tabela_base = pd.concat([tabela_base, total])
-
-        # Formata a tabela
-        st.write("### Resumo por Base")
-        st.dataframe(
-            tabela_base.style
-            .format({
-                'VALOR': 'R$ {:,.2f}',
-                'VL EQ': 'R$ {:,.2f}',
-                'CONTRATOS': '{:,.0f}',
-                'EQUIPES': '{:,.0f}',
-                'EQ_CTTS': '{:,.1f}'
+        try:
+            # Agrupa os dados por BASE
+            tabela_base = dados_filtrados.groupby('BASE', as_index=False).agg({
+                'VALOR EMPRESA': 'sum',
+                'CONTRATO': 'count',
+                'TECNICO': 'nunique',
             })
-            .set_properties(**{
-                'background-color': '#262730',
-                'color': 'white',
-                'border': '1px solid gray'
+
+            # Calcula VL EQ (Valor por Equipe)
+            tabela_base['VL EQ'] = tabela_base['VALOR EMPRESA'] / tabela_base['TECNICO']
+            
+            # Calcula EQ_CTTS (Contratos por Equipe)
+            tabela_base['EQ_CTTS'] = (tabela_base['CONTRATO'] / tabela_base['TECNICO']).round(1)
+
+            # Renomeia as colunas
+            tabela_base.columns = ['BASE', 'VALOR', 'CONTRATOS', 'EQUIPES', 'VL EQ', 'EQ_CTTS']
+
+            # Ordena por BASE
+            tabela_base = tabela_base.sort_values('BASE')
+
+            # Adiciona linha de total
+            total = pd.DataFrame({
+                'BASE': ['Total Geral'],
+                'VALOR': [tabela_base['VALOR'].sum()],
+                'CONTRATOS': [tabela_base['CONTRATOS'].sum()],
+                'EQUIPES': [tabela_base['EQUIPES'].sum()],
+                'VL EQ': [tabela_base['VALOR'].sum() / tabela_base['EQUIPES'].sum()],
+                'EQ_CTTS': [(tabela_base['CONTRATOS'].sum() / tabela_base['EQUIPES'].sum()).round(1)]
             })
-            .set_table_styles([
-                {'selector': 'th', 'props': [('background-color', '#1E1E1E'), ('color', 'white')]},
-                {'selector': 'tr:last-child', 'props': [('background-color', '#1E1E1E'), ('font-weight', 'bold')]}
-            ])
-        )
 
-        # Tabela de Desconexão
-        st.write("### Desconexão")
-        desconexao = dados_filtrados[
-            dados_filtrados['TIPO DE SERVIÇO'].str.contains('DESCONEX', case=False, na=False)
-        ].groupby('BASE').agg({
-            'VALOR EMPRESA': 'sum',
-            'CONTRATO': 'count',
-            'TECNICO': 'nunique'
-        }).reset_index()
+            # Concatena e reseta o índice
+            tabela_base = pd.concat([tabela_base, total], ignore_index=True)
 
-        # Calcula métricas adicionais
-        desconexao['VL EQ'] = desconexao['VALOR EMPRESA'] / desconexao['TECNICO']
-        desconexao['EQ_CTTS'] = (desconexao['CONTRATO'] / desconexao['TECNICO']).round(1)
-        
-        # Adiciona total
-        total_desc = pd.DataFrame({
-            'BASE': ['Total Geral'],
-            'VALOR EMPRESA': [desconexao['VALOR EMPRESA'].sum()],
-            'CONTRATO': [desconexao['CONTRATO'].sum()],
-            'TECNICO': [desconexao['TECNICO'].sum()],
-            'VL EQ': [desconexao['VALOR EMPRESA'].sum() / desconexao['TECNICO'].sum()],
-            'EQ_CTTS': [(desconexao['CONTRATO'].sum() / desconexao['TECNICO'].sum()).round(1)]
-        })
+            # Formata a tabela
+            st.write("### Resumo por Base")
+            st.dataframe(
+                tabela_base.style
+                .format({
+                    'VALOR': 'R$ {:,.2f}',
+                    'VL EQ': 'R$ {:,.2f}',
+                    'CONTRATOS': '{:,.0f}',
+                    'EQUIPES': '{:,.0f}',
+                    'EQ_CTTS': '{:,.1f}'
+                })
+                .set_properties(**{
+                    'background-color': '#262730',
+                    'color': 'white',
+                    'border': '1px solid gray'
+                })
+                .set_table_styles([
+                    {'selector': 'th', 'props': [('background-color', '#1E1E1E'), ('color', 'white')]},
+                    {'selector': 'tr:last-child', 'props': [('background-color', '#1E1E1E'), ('font-weight', 'bold')]}
+                ])
+            )
 
-        desconexao = pd.concat([desconexao, total_desc])
-
-        # Mostra a tabela de desconexão
-        st.dataframe(
-            desconexao.style
-            .format({
-                'VALOR EMPRESA': 'R$ {:,.2f}',
-                'VL EQ': 'R$ {:,.2f}',
-                'CONTRATO': '{:,.0f}',
-                'TECNICO': '{:,.0f}',
-                'EQ_CTTS': '{:,.1f}'
+            # Tabela de Desconexão
+            desconexao = dados_filtrados[
+                dados_filtrados['TIPO DE SERVIÇO'].str.contains('DESCONEX', case=False, na=False)
+            ].groupby('BASE', as_index=False).agg({
+                'VALOR EMPRESA': 'sum',
+                'CONTRATO': 'count',
+                'TECNICO': 'nunique'
             })
-            .set_properties(**{
-                'background-color': '#262730',
-                'color': 'white',
-                'border': '1px solid gray'
+
+            # Calcula métricas adicionais
+            desconexao['VL EQ'] = desconexao['VALOR EMPRESA'] / desconexao['TECNICO']
+            desconexao['EQ_CTTS'] = (desconexao['CONTRATO'] / desconexao['TECNICO']).round(1)
+            
+            # Adiciona total
+            total_desc = pd.DataFrame({
+                'BASE': ['Total Geral'],
+                'VALOR EMPRESA': [desconexao['VALOR EMPRESA'].sum()],
+                'CONTRATO': [desconexao['CONTRATO'].sum()],
+                'TECNICO': [desconexao['TECNICO'].sum()],
+                'VL EQ': [desconexao['VALOR EMPRESA'].sum() / desconexao['TECNICO'].sum()],
+                'EQ_CTTS': [(desconexao['CONTRATO'].sum() / desconexao['TECNICO'].sum()).round(1)]
             })
-            .set_table_styles([
-                {'selector': 'th', 'props': [('background-color', '#1E1E1E'), ('color', 'white')]},
-                {'selector': 'tr:last-child', 'props': [('background-color', '#1E1E1E'), ('font-weight', 'bold')]}
-            ])
-        )
+
+            # Concatena e reseta o índice
+            desconexao = pd.concat([desconexao, total_desc], ignore_index=True)
+
+            # Mostra a tabela de desconexão
+            st.write("### Desconexão")
+            st.dataframe(
+                desconexao.style
+                .format({
+                    'VALOR EMPRESA': 'R$ {:,.2f}',
+                    'VL EQ': 'R$ {:,.2f}',
+                    'CONTRATO': '{:,.0f}',
+                    'TECNICO': '{:,.0f}',
+                    'EQ_CTTS': '{:,.1f}'
+                })
+                .set_properties(**{
+                    'background-color': '#262730',
+                    'color': 'white',
+                    'border': '1px solid gray'
+                })
+                .set_table_styles([
+                    {'selector': 'th', 'props': [('background-color', '#1E1E1E'), ('color', 'white')]},
+                    {'selector': 'tr:last-child', 'props': [('background-color', '#1E1E1E'), ('font-weight', 'bold')]}
+                ])
+            )
+        except Exception as e:
+            st.error(f"Erro ao gerar tabelas: {str(e)}")
 
     def analisar_status(self):
         """
