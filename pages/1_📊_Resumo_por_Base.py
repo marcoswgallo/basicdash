@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from streamlit.runtime.scriptrunner import get_script_run_ctx
-from streamlit_extras.switch_page_button import switch_page
+import plotly.express as px
 from streamlit_app import DashboardTecnicos, load_css
 
 def analise_inteligente(dados):
@@ -88,11 +87,15 @@ def main():
     with st.sidebar:
         st.title("🔧 Menu Principal")
         
-        # Adiciona link para página inicial
+        # Adiciona link para página inicial usando markdown
         st.markdown(
             '<a href="/" target="_self" class="home-link">🏠 Página Inicial</a>', 
             unsafe_allow_html=True
         )
+        
+        # Alternativa usando botão do Streamlit
+        if st.button("🏠 Voltar para Página Inicial", use_container_width=True):
+            st.switch_page("streamlit_app.py")
     
     st.title("📊 Resumo por Base")
     
@@ -182,7 +185,6 @@ def main():
             
             media_geral = dados_eficiencia['Eficiência'].mean()
             
-            import plotly.express as px
             fig = px.bar(
                 dados_eficiencia.reset_index(),
                 x='BASE',
