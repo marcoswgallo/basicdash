@@ -55,4 +55,23 @@ section[data-testid="stSidebar"] .stRadio > label {
 [data-testid="stDataFrame"] tr:last-child {
     background-color: #1E1E1E !important;
     font-weight: bold !important;
+}
+
+/* Adicione estas regras ao seu arquivo style.css */
+nav[data-testid="stSidebarNav"] {
+    background-color: #262730;
+    padding-top: 2rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+section[data-testid="stSidebarContent"] {
+    background-color: #262730 !important;
+}
+
+.stApp > header {
+    background-color: transparent;
 } 

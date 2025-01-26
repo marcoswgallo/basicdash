@@ -80,10 +80,13 @@ def main():
         initial_sidebar_state="expanded"
     )
     
-    # Carrega o CSS
     load_css()
     
     st.title("📊 Resumo por Base")
+    
+    # Menu na sidebar (para manter consistência)
+    with st.sidebar:
+        st.title("🔧 Menu Principal")
     
     dashboard = DashboardTecnicos()
     arquivos = dashboard.listar_arquivos()
@@ -92,29 +95,69 @@ def main():
         st.error("Nenhum arquivo encontrado na pasta Dados_excel")
         return
         
-    arquivo = arquivos[0]  # Usa o primeiro arquivo encontrado
+    arquivo = arquivos[0]
     
     if dashboard.carregar_dados(arquivo):
-        # Verifica se os dados foram carregados corretamente
         if dashboard.dados is not None:
-            # Usa todos os dados sem filtros
-            dashboard.mostrar_tabela_bases(dashboard.dados)
+            # Adiciona filtros
+            st.write("### Filtros")
+            col1, col2, col3 = st.columns(3)
             
-            # Adiciona seção de insights
-            st.write("## 🧠 Análise Inteligente")
+            with col1:
+                grupos_disponiveis = ['Todos'] + sorted(dashboard.dados['GRUPO'].unique().tolist())
+                grupo_selecionado = st.selectbox(
+                    "Selecione o Grupo:",
+                    grupos_disponiveis,
+                    key='grupo_selector_resumo'
+                )
+                
+                # Filtra as bases baseado no grupo selecionado
+                if grupo_selecionado != 'Todos':
+                    bases_filtradas = dashboard.dados[dashboard.dados['GRUPO'] == grupo_selecionado]['BASE'].unique()
+                else:
+                    bases_filtradas = dashboard.dados['BASE'].unique()
+                
+                bases_disponiveis = ['Todas'] + sorted(bases_filtradas.tolist())
+                base_selecionada = st.selectbox(
+                    "Selecione a Base:",
+                    bases_disponiveis,
+                    key='base_selector_resumo'
+                )
             
+            with col2:
+                status_disponiveis = sorted(dashboard.dados['STATUS'].dropna().unique().tolist())
+                status_selecionados = st.multiselect(
+                    "Selecione os Status:",
+                    status_disponiveis,
+                    default=status_disponiveis,
+                    key='status_selector_resumo'
+                )
+            
+            # Aplica os filtros
+            dados_filtrados = dashboard.dados.copy()
+            
+            if grupo_selecionado != 'Todos':
+                dados_filtrados = dados_filtrados[dados_filtrados['GRUPO'] == grupo_selecionado]
+            
+            if base_selecionada != 'Todas':
+                dados_filtrados = dados_filtrados[dados_filtrados['BASE'] == base_selecionada]
+            
+            if status_selecionados:
+                dados_filtrados = dados_filtrados[dados_filtrados['STATUS'].isin(status_selecionados)]
+            
+            # Mostra as tabelas com os dados filtrados
+            dashboard.mostrar_tabela_bases(dados_filtrados)
+            
+            # Continua com as análises...
             with st.spinner("Gerando insights..."):
                 try:
-                    insights = analise_inteligente(dashboard.dados)
-                    
-                    # Mostra insights em cards
+                    insights = analise_inteligente(dados_filtrados)
                     cols = st.columns(2)
                     for i, insight in enumerate(insights):
                         with cols[i % 2]:
                             st.info(insight)
                 except Exception as e:
                     st.error(f"Erro ao gerar insights: {str(e)}")
-                    st.error("Verifique se todas as colunas necessárias estão presentes nos dados")
         
         # Adiciona análises comparativas
         st.write("## 📊 Análises Comparativas")
@@ -123,7 +166,7 @@ def main():
         
         with col1:
             # Gráfico de Eficiência
-            dados_eficiencia = dashboard.dados.groupby('BASE').agg({
+            dados_eficiencia = dados_filtrados.groupby('BASE').agg({
                 'CONTRATO': 'count',
                 'TECNICO': 'nunique'
             })
@@ -151,7 +194,7 @@ def main():
         
         with col2:
             # Gráfico de Rentabilidade
-            dados_rent = dashboard.dados.groupby('BASE').agg({
+            dados_rent = dados_filtrados.groupby('BASE').agg({
                 'VALOR EMPRESA': 'sum',
                 'TECNICO': 'nunique'
             })
