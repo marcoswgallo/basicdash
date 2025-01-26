@@ -301,28 +301,85 @@ def analisar_horarios(dados):
 def analisar_eficiencia_tecnicos(dados):
     st.subheader("👨‍🔧 Análise de Eficiência dos Técnicos")
     
+    # Calcula métricas por técnico
     eficiencia = dados.groupby('TECNICO').agg({
         'CONTRATO': 'count',
-        'VALOR EMPRESA': 'sum',
+        'VALOR EMPRESA': ['sum', 'mean'],
         'TEMPO_MINUTOS': 'mean',
         'STATUS': lambda x: (x == 'Executado').mean() * 100
     }).round(2)
     
-    eficiencia['VALOR_POR_HORA'] = (eficiencia['VALOR EMPRESA'] / 
-                                   (eficiencia['TEMPO_MINUTOS'].sum() / 60))
+    # Ajusta os nomes das colunas
+    eficiencia.columns = [
+        'TOTAL_CONTRATOS',
+        'VALOR_TOTAL',
+        'VALOR_MEDIO',
+        'TEMPO_MEDIO',
+        'TAXA_SUCESSO'
+    ]
+    eficiencia = eficiencia.reset_index()
     
-    # Ranking dos técnicos
-    fig = px.scatter(
-        eficiencia.reset_index(),
-        x='CONTRATO',
-        y='VALOR_POR_HORA',
-        size='TEMPO_MINUTOS',
-        color='STATUS',
-        hover_data=['TECNICO'],
-        title='Performance dos Técnicos'
+    # Calcula produtividade
+    eficiencia['PRODUTIVIDADE'] = (eficiencia['TOTAL_CONTRATOS'] * 
+                                  eficiencia['TAXA_SUCESSO'] / 100).round(2)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Gráfico de barras para total de contratos
+        fig = px.bar(
+            eficiencia.sort_values('TOTAL_CONTRATOS', ascending=True).tail(10),
+            x='TOTAL_CONTRATOS',
+            y='TECNICO',
+            orientation='h',
+            title='Top 10 Técnicos por Volume',
+            labels={
+                'TOTAL_CONTRATOS': 'Total de Contratos',
+                'TECNICO': 'Técnico'
+            }
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Gráfico de barras para taxa de sucesso
+        fig = px.bar(
+            eficiencia.sort_values('TAXA_SUCESSO', ascending=True).tail(10),
+            x='TAXA_SUCESSO',
+            y='TECNICO',
+            orientation='h',
+            title='Top 10 Técnicos por Taxa de Sucesso',
+            labels={
+                'TAXA_SUCESSO': 'Taxa de Sucesso (%)',
+                'TECNICO': 'Técnico'
+            }
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Tabela resumo
+    st.write("### Resumo por Técnico")
+    
+    # Formata a tabela
+    tabela_resumo = eficiencia.copy()
+    tabela_resumo['VALOR_TOTAL'] = tabela_resumo['VALOR_TOTAL'].apply(lambda x: f"R$ {x:,.2f}")
+    tabela_resumo['VALOR_MEDIO'] = tabela_resumo['VALOR_MEDIO'].apply(lambda x: f"R$ {x:,.2f}")
+    tabela_resumo['TAXA_SUCESSO'] = tabela_resumo['TAXA_SUCESSO'].apply(lambda x: f"{x:.1f}%")
+    tabela_resumo['TEMPO_MEDIO'] = tabela_resumo['TEMPO_MEDIO'].apply(lambda x: f"{x:.1f} min")
+    
+    tabela_resumo.columns = [
+        'Técnico',
+        'Total Contratos',
+        'Valor Total',
+        'Valor Médio',
+        'Tempo Médio',
+        'Taxa de Sucesso',
+        'Produtividade'
+    ]
+    
+    st.dataframe(
+        tabela_resumo.sort_values('Total Contratos', ascending=False),
+        use_container_width=True,
+        hide_index=True
     )
-    
-    st.plotly_chart(fig, use_container_width=True)
 
 def preparar_dados(dados):
     """Prepara os dados para análise, criando colunas calculadas"""
