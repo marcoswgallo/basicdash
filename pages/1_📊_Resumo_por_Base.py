@@ -87,10 +87,27 @@ def main():
     with st.sidebar:
         st.title("🔧 Menu Principal")
         
-        # Adiciona botão para página inicial
-        if st.button("🏠 Página Inicial", use_container_width=True):
-            st.session_state.page = "main"
-            st._rerun()
+        # Adiciona link para página inicial
+        st.markdown(
+            """
+            <style>
+            div.stButton > button {
+                width: 100%;
+                background-color: #262730;
+                color: white;
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+            div.stButton > button:hover {
+                background-color: #3c3c44;
+                border-color: rgba(255,255,255,0.2);
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        if st.button("🏠 Página Inicial"):
+            st.markdown('<meta http-equiv="refresh" content="0; url=/" />', unsafe_allow_html=True)
     
     st.title("📊 Resumo por Base")
     
