@@ -251,11 +251,11 @@ class DashboardTecnicos:
             data_min = datas_validas.min()
             data_max = datas_validas.max()
             
-            # Cria uma linha para os filtros
+            # Filtros
             st.write("### Filtros")
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)  # Mudamos para 3 colunas
             
-            # Filtro de BASE
+            # Filtro de GRUPO e BASE
             with col1:
                 if 'GRUPO' in self.dados.columns:
                     grupos_disponiveis = ['Todos'] + sorted(self.dados['GRUPO'].unique().tolist())
@@ -265,24 +265,18 @@ class DashboardTecnicos:
                         key='grupo_selector'
                     )
                     
+                    # Filtra as bases baseado no grupo selecionado
                     if grupo_selecionado != 'Todos':
-                        bases_do_grupo = GRUPOS_BASES.get(grupo_selecionado, [])
-                        bases_disponiveis = ['Todas'] + sorted(
-                            self.dados[self.dados['GRUPO'] == grupo_selecionado]['BASE']
-                            .unique()
-                            .tolist()
-                        )
+                        bases_filtradas = self.dados[self.dados['GRUPO'] == grupo_selecionado]['BASE'].unique()
                     else:
-                        bases_disponiveis = ['Todas'] + sorted(self.dados['BASE'].unique().tolist())
+                        bases_filtradas = self.dados['BASE'].unique()
                     
+                    bases_disponiveis = ['Todas'] + sorted(bases_filtradas.tolist())
                     base_selecionada = st.selectbox(
                         "Selecione a Base:",
                         bases_disponiveis,
                         key='base_selector'
                     )
-                else:
-                    st.error(f"Coluna GRUPO não encontrada no arquivo")
-                    return
             
             # Filtro de STATUS
             with col2:
@@ -291,20 +285,22 @@ class DashboardTecnicos:
                     status_selecionados = st.multiselect(
                         "Selecione os Status:",
                         status_disponiveis,
-                        default=status_disponiveis  # Começa com todos selecionados
+                        default=status_disponiveis
                     )
-                else:
-                    st.error(f"Coluna STATUS não encontrada no arquivo")
-                    return
             
             # Aplica os filtros
             # 1. Filtro de período
             mask_periodo = (self.dados['DATA_TOA'] >= data_min) & \
-                         (self.dados['DATA_TOA'] <= data_max)
+                          (self.dados['DATA_TOA'] <= data_max)
             
-            # 2. Filtro de BASE
+            # 2. Filtro de GRUPO e BASE
+            if grupo_selecionado != 'Todos':
+                mask_grupo = (self.dados['GRUPO'] == grupo_selecionado)
+            else:
+                mask_grupo = pd.Series(True, index=self.dados.index)
+            
             if base_selecionada != 'Todas':
-                mask_base = (self.dados['BASE'].fillna('Não Informado') == base_selecionada)
+                mask_base = (self.dados['BASE'] == base_selecionada)
             else:
                 mask_base = pd.Series(True, index=self.dados.index)
             
@@ -316,7 +312,7 @@ class DashboardTecnicos:
                 return
             
             # Aplica todos os filtros
-            dados_filtrados = self.dados[mask_periodo & mask_base & mask_status]
+            dados_filtrados = self.dados[mask_periodo & mask_grupo & mask_base & mask_status]
             
             if len(dados_filtrados) == 0:
                 st.warning("Nenhum dado encontrado para os filtros selecionados")
