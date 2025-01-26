@@ -156,6 +156,19 @@ def main():
             if status_selecionados:
                 dados_filtrados = dados_filtrados[dados_filtrados['STATUS'].isin(status_selecionados)]
             
+            # Remove bases com valores zerados
+            dados_agrupados = dados_filtrados.groupby('BASE').agg({
+                'CONTRATO': 'count',
+                'VALOR EMPRESA': 'sum'
+            }).reset_index()
+            
+            bases_ativas = dados_agrupados[
+                (dados_agrupados['CONTRATO'] > 0) | 
+                (dados_agrupados['VALOR EMPRESA'] > 0)
+            ]['BASE'].unique()
+            
+            dados_filtrados = dados_filtrados[dados_filtrados['BASE'].isin(bases_ativas)]
+            
             # Adiciona métricas dinâmicas
             col1, col2, col3, col4 = st.columns(4)
             
@@ -214,54 +227,65 @@ def main():
                 except Exception as e:
                     st.error(f"Erro ao gerar insights: {str(e)}")
         
-        # Adiciona análises comparativas
-        st.write("## 📊 Análises Comparativas")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Gráfico de Eficiência
-            dados_eficiencia = dados_filtrados.groupby('BASE').agg({
-                'CONTRATO': 'count',
-                'TECNICO': 'nunique'
-            })
-            dados_eficiencia['Eficiência'] = dados_eficiencia['CONTRATO'] / dados_eficiencia['TECNICO']
+            # Adiciona análises comparativas
+            st.write("## 📊 Análises Comparativas")
             
-            media_geral = dados_eficiencia['Eficiência'].mean()
+            col1, col2 = st.columns(2)
             
-            fig = px.bar(
-                dados_eficiencia.reset_index(),
-                x='BASE',
-                y='Eficiência',
-                title='Eficiência por Base (Contratos/Técnico)'
-            )
+            with col1:
+                # Gráfico de Eficiência
+                dados_eficiencia = dados_filtrados.groupby('BASE').agg({
+                    'CONTRATO': 'count',
+                    'TECNICO': 'nunique'
+                }).reset_index()
+                
+                # Remove bases sem técnicos para evitar divisão por zero
+                dados_eficiencia = dados_eficiencia[dados_eficiencia['TECNICO'] > 0]
+                dados_eficiencia['Eficiência'] = dados_eficiencia['CONTRATO'] / dados_eficiencia['TECNICO']
+                
+                if not dados_eficiencia.empty:
+                    media_geral = dados_eficiencia['Eficiência'].mean()
+                    
+                    fig = px.bar(
+                        dados_eficiencia,
+                        x='BASE',
+                        y='Eficiência',
+                        title='Eficiência por Base (Contratos/Técnico)'
+                    )
+                    
+                    fig.add_hline(
+                        y=media_geral,
+                        line_dash="dash",
+                        line_color="red",
+                        annotation_text=f"Média: {media_geral:.1f}"
+                    )
+                    
+                    st.plotly_chart(fig)
+                else:
+                    st.warning("Não há dados suficientes para gerar o gráfico de eficiência")
             
-            # Adiciona linha da média
-            fig.add_hline(
-                y=media_geral,
-                line_dash="dash",
-                line_color="red",
-                annotation_text=f"Média: {media_geral:.1f}"
-            )
-            
-            st.plotly_chart(fig)
-        
-        with col2:
-            # Gráfico de Rentabilidade
-            dados_rent = dados_filtrados.groupby('BASE').agg({
-                'VALOR EMPRESA': 'sum',
-                'TECNICO': 'nunique'
-            })
-            dados_rent['Rentabilidade'] = dados_rent['VALOR EMPRESA'] / dados_rent['TECNICO']
-            
-            fig = px.bar(
-                dados_rent.reset_index(),
-                x='BASE',
-                y='Rentabilidade',
-                title='Rentabilidade por Base (R$/Técnico)'
-            )
-            
-            st.plotly_chart(fig)
+            with col2:
+                # Gráfico de Rentabilidade
+                dados_rent = dados_filtrados.groupby('BASE').agg({
+                    'VALOR EMPRESA': 'sum',
+                    'TECNICO': 'nunique'
+                }).reset_index()
+                
+                # Remove bases sem técnicos
+                dados_rent = dados_rent[dados_rent['TECNICO'] > 0]
+                dados_rent['Rentabilidade'] = dados_rent['VALOR EMPRESA'] / dados_rent['TECNICO']
+                
+                if not dados_rent.empty:
+                    fig = px.bar(
+                        dados_rent,
+                        x='BASE',
+                        y='Rentabilidade',
+                        title='Rentabilidade por Base (R$/Técnico)'
+                    )
+                    
+                    st.plotly_chart(fig)
+                else:
+                    st.warning("Não há dados suficientes para gerar o gráfico de rentabilidade")
 
 if __name__ == "__main__":
     main() 

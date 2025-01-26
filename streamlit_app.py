@@ -314,9 +314,66 @@ class DashboardTecnicos:
             # Aplica todos os filtros
             dados_filtrados = self.dados[mask_periodo & mask_grupo & mask_base & mask_status]
             
+            # Remove bases com valores zerados
+            dados_agrupados = dados_filtrados.groupby('BASE').agg({
+                'CONTRATO': 'count',
+                'VALOR EMPRESA': 'sum'
+            }).reset_index()
+            
+            bases_ativas = dados_agrupados[
+                (dados_agrupados['CONTRATO'] > 0) | 
+                (dados_agrupados['VALOR EMPRESA'] > 0)
+            ]['BASE'].unique()
+            
+            dados_filtrados = dados_filtrados[dados_filtrados['BASE'].isin(bases_ativas)]
+            
             if len(dados_filtrados) == 0:
                 st.warning("Nenhum dado encontrado para os filtros selecionados")
                 return
+            
+            # Adiciona métricas dinâmicas
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                total_registros = len(dados_filtrados)
+                st.metric(
+                    "Total de Registros",
+                    f"{total_registros:,}",
+                    help="Número total de registros após aplicar os filtros"
+                )
+            
+            with col2:
+                total_tecnicos = dados_filtrados['TECNICO'].nunique()
+                st.metric(
+                    "Total de Técnicos",
+                    f"{total_tecnicos:,}",
+                    help="Número de técnicos únicos"
+                )
+            
+            with col3:
+                valor_total = dados_filtrados['VALOR EMPRESA'].sum()
+                st.metric(
+                    "Valor Total",
+                    f"R$ {valor_total:,.2f}",
+                    help="Soma do valor empresa"
+                )
+            
+            with col4:
+                media_por_tecnico = valor_total / total_tecnicos if total_tecnicos > 0 else 0
+                st.metric(
+                    "Média por Técnico",
+                    f"R$ {media_por_tecnico:,.2f}",
+                    help="Valor total dividido pelo número de técnicos"
+                )
+            
+            # Adiciona informação do filtro atual
+            if grupo_selecionado != 'Todos' or base_selecionada != 'Todas':
+                st.info(
+                    f"📊 Mostrando dados para: " +
+                    (f"Grupo **{grupo_selecionado}**" if grupo_selecionado != 'Todos' else '') +
+                    (' > ' if grupo_selecionado != 'Todos' and base_selecionada != 'Todas' else '') +
+                    (f"Base **{base_selecionada}**" if base_selecionada != 'Todas' else '')
+                )
             
             # Adiciona métricas por base
             st.write("### Métricas por Base")
