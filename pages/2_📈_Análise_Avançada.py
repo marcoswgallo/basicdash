@@ -278,22 +278,43 @@ def preparar_dados(dados):
     try:
         dados = dados.copy()
         
-        # Verifica as colunas disponíveis
-        st.write("Colunas disponíveis:", dados.columns.tolist())
-        
         # Converte datas
         if 'DATA_TOA' in dados.columns:
             dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
         
-        # Verifica se já temos a coluna TEMPO_MINUTOS
-        if 'TEMPO_MINUTOS' not in dados.columns:
-            st.warning("Coluna TEMPO_MINUTOS não encontrada. Usando valor padrão.")
-            dados['TEMPO_MINUTOS'] = 60  # valor padrão de 1 hora
-        
         # Garante que valores monetários sejam numéricos
         for col in ['VALOR TÉCNICO', 'VALOR EMPRESA']:
             if col in dados.columns:
-                dados[col] = pd.to_numeric(dados[col].astype(str).str.replace('R$', '').str.replace(',', '.'), errors='coerce')
+                dados[col] = pd.to_numeric(
+                    dados[col].astype(str)
+                    .str.replace('R$', '')
+                    .str.replace('.', '')
+                    .str.replace(',', '.'),
+                    errors='coerce'
+                )
+        
+        # Calcula métricas adicionais
+        if 'TEMPO_MINUTOS' not in dados.columns:
+            # Calcula tempo médio por tipo de serviço
+            tempo_medio_servico = {
+                'ADESAO DE ASSINATURA': 90,
+                'MUDANCA DE ENDERECO': 120,
+                'VISITA TECNICA': 60,
+                'SERVICOS': 45,
+                'MUDANCA DE PACOTE': 30
+            }
+            
+            # Aplica tempo médio baseado no tipo de serviço
+            dados['TEMPO_MINUTOS'] = dados['TIPO DE SERVIÇO'].map(
+                lambda x: tempo_medio_servico.get(x, 60)
+            )
+            
+            st.info("Usando tempos médios estimados por tipo de serviço")
+        
+        # Adiciona outras métricas úteis
+        dados['VALOR_POR_MINUTO'] = dados['VALOR EMPRESA'] / dados['TEMPO_MINUTOS']
+        dados['MES'] = dados['DATA_TOA'].dt.month
+        dados['DIA_SEMANA'] = dados['DATA_TOA'].dt.day_name()
         
         return dados
     
