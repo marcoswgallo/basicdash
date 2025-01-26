@@ -214,18 +214,31 @@ def main():
         # Filtros
         st.sidebar.title("Filtros")
         
-        # Filtro de data
+        # Converte datas para datetime
+        dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA']).dt.date
         datas_disponiveis = sorted(dados['DATA_TOA'].unique())
-        data_min = st.sidebar.date_input("Data Inicial", min(datas_disponiveis))
-        data_max = st.sidebar.date_input("Data Final", max(datas_disponiveis))
+        
+        # Filtro de data
+        data_min = st.sidebar.date_input(
+            "Data Inicial",
+            value=datas_disponiveis[0],
+            min_value=min(datas_disponiveis),
+            max_value=max(datas_disponiveis)
+        )
+        
+        data_max = st.sidebar.date_input(
+            "Data Final",
+            value=datas_disponiveis[-1],
+            min_value=min(datas_disponiveis),
+            max_value=max(datas_disponiveis)
+        )
         
         # Filtro de grupo/base
         grupo = st.sidebar.selectbox("Grupo", ['Todos'] + sorted(dados['GRUPO'].unique().tolist()))
         base = st.sidebar.selectbox("Base", ['Todas'] + sorted(dados['BASE'].unique().tolist()))
         
         # Aplica filtros
-        mask = (dados['DATA_TOA'] >= pd.Timestamp(data_min)) & \
-               (dados['DATA_TOA'] <= pd.Timestamp(data_max))
+        mask = (dados['DATA_TOA'] >= data_min) & (dados['DATA_TOA'] <= data_max)
                
         if grupo != 'Todos':
             mask &= dados['GRUPO'] == grupo
