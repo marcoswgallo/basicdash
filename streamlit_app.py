@@ -6,6 +6,53 @@ from datetime import datetime
 import os
 import gc
 
+# Adicione esta constante no início do arquivo, após os imports
+GRUPOS_BASES = {
+    'Instalação': [
+        'BASE BAURU',
+        'BASE BOTUCATU',
+        'BASE CAMPINAS',
+        'BASE LIMEIRA',
+        'BASE PAULINIA',
+        'BASE PIRACICABA',
+        'BASE RIBEIRAO PRETO',
+        'BASE SAO JOSE DO RIO PRETO',
+        'BASE SOROCABA',
+        'BASE SUMARE',
+        'GPON BAURU',
+        'GPON RIBEIRAO PRETO'
+    ],
+    'Manutenção': [
+        'BASE ARARAS VT',
+        'BASE BOTUCATU VT',
+        'BASE MDU ARARAS',
+        'BASE MDU BAURU',
+        'BASE MDU MOGI',
+        'BASE MDU PIRACICABA',
+        'BASE MDU SJRP',
+        'BASE PIRACICABA VT',
+        'BASE RIBEIRÃO VT',
+        'BASE SERTAOZINHO VT',
+        'BASE SUMARE VT',
+        'BASE VAR BAURU',
+        'BASE VAR PIRACICABA',
+        'BASE VAR SUMARE'
+    ],
+    'Desconexão': [
+        'DESCONEXAO',
+        'DESCONEXÃO BOTUCATU',
+        'DESCONEXÃO CAMPINAS',
+        'DESCONEXAO RIBEIRAO PRETO'
+    ]
+}
+
+# Função auxiliar para encontrar o grupo de uma base
+def get_grupo_base(base):
+    for grupo, bases in GRUPOS_BASES.items():
+        if base in bases:
+            return grupo
+    return "Outros"  # Para bases que não estão em nenhum grupo
+
 class DashboardTecnicos:
     def __init__(self):
         self.dados = None
@@ -33,6 +80,8 @@ class DashboardTecnicos:
             'VALOR TÉCNICO': 'float32',   # Reduz precisão para economizar memória
             'VALOR EMPRESA': 'float32'
         }
+        
+        self.grupos_bases = GRUPOS_BASES
         
     def listar_arquivos(self):
         """
@@ -153,6 +202,9 @@ class DashboardTecnicos:
             # Otimiza memória
             self.dados = self.dados.copy()
             
+            # Adiciona coluna de grupo
+            self.dados['GRUPO'] = self.dados['BASE'].apply(get_grupo_base)
+            
             return True
             
         except Exception as e:
@@ -205,20 +257,31 @@ class DashboardTecnicos:
             
             # Filtro de BASE
             with col1:
-                if 'BASE' in self.dados.columns:
-                    bases_disponiveis = ['Todas'] + sorted(
-                        self.dados['BASE']
-                        .replace('', 'Não Informado')
-                        .unique()
-                        .tolist()
+                if 'GRUPO' in self.dados.columns:
+                    grupos_disponiveis = ['Todos'] + sorted(self.dados['GRUPO'].unique().tolist())
+                    grupo_selecionado = st.selectbox(
+                        "Selecione o Grupo:",
+                        grupos_disponiveis,
+                        key='grupo_selector'
                     )
+                    
+                    if grupo_selecionado != 'Todos':
+                        bases_do_grupo = GRUPOS_BASES.get(grupo_selecionado, [])
+                        bases_disponiveis = ['Todas'] + sorted(
+                            self.dados[self.dados['GRUPO'] == grupo_selecionado]['BASE']
+                            .unique()
+                            .tolist()
+                        )
+                    else:
+                        bases_disponiveis = ['Todas'] + sorted(self.dados['BASE'].unique().tolist())
+                    
                     base_selecionada = st.selectbox(
                         "Selecione a Base:",
                         bases_disponiveis,
                         key='base_selector'
                     )
                 else:
-                    st.error(f"Coluna BASE não encontrada no arquivo")
+                    st.error(f"Coluna GRUPO não encontrada no arquivo")
                     return
             
             # Filtro de STATUS
