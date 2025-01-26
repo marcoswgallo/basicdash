@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_app import DashboardTecnicos, load_css
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 def analisar_tempo_execucao(dados):
     st.subheader("⏱️ Análise de Tempo de Execução")
@@ -169,23 +169,24 @@ def preparar_dados(dados):
         if 'DATA_TOA' in dados.columns:
             dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
         
-        # Tenta diferentes nomes possíveis para as colunas de hora
-        hora_inicio_cols = ['HORA_INICIO', 'HORA INICIO', 'INICIO']
-        hora_fim_cols = ['HORA_FIM', 'HORA FIM', 'FIM']
-        
-        # Encontra as colunas corretas
-        hora_inicio = next((col for col in hora_inicio_cols if col in dados.columns), None)
-        hora_fim = next((col for col in hora_fim_cols if col in dados.columns), None)
-        
-        if hora_inicio and hora_fim:
-            dados['HORA_INICIO'] = pd.to_datetime(dados[hora_inicio])
-            dados['HORA_FIM'] = pd.to_datetime(dados[hora_fim])
-            dados['TEMPO_EXECUCAO'] = dados['HORA_FIM'] - dados['HORA_INICIO']
-            dados['TEMPO_MINUTOS'] = dados['TEMPO_EXECUCAO'].dt.total_seconds() / 60
-        else:
-            # Se não encontrar as colunas de hora, cria uma coluna de tempo padrão
-            st.warning("Colunas de hora não encontradas. Usando valor padrão para tempo.")
-            dados['TEMPO_MINUTOS'] = 60  # valor padrão de 1 hora
+        # Calcula tempo de execução usando as colunas corretas
+        if 'TEMPO_MINUTOS' not in dados.columns:
+            try:
+                # Converte strings de hora para datetime
+                dados['HORA_INICIO'] = pd.to_datetime(dados['HORA INICIO'], format='%H:%M:%S').dt.time
+                dados['HORA_FIM'] = pd.to_datetime(dados['HORA FIM'], format='%H:%M:%S').dt.time
+                
+                # Calcula a diferença em minutos
+                dados['TEMPO_MINUTOS'] = dados.apply(
+                    lambda row: (
+                        (datetime.combine(date.today(), row['HORA_FIM']) - 
+                         datetime.combine(date.today(), row['HORA_INICIO']))
+                    ).total_seconds() / 60 if pd.notnull(row['HORA_FIM']) and pd.notnull(row['HORA_INICIO']) else 0,
+                    axis=1
+                )
+            except Exception as e:
+                st.warning(f"Erro ao calcular tempo: {str(e)}. Usando valor padrão.")
+                dados['TEMPO_MINUTOS'] = 60  # valor padrão de 1 hora
         
         return dados
     
