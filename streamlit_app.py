@@ -128,7 +128,11 @@ class DashboardTecnicos:
             
             # Otimiza processamento de datas
             if 'DATA_TOA' in self.dados.columns:
-                self.dados['DATA_TOA'] = pd.to_datetime(self.dados['DATA_TOA'], errors='coerce')
+                self.dados['DATA_TOA'] = pd.to_datetime(
+                    self.dados['DATA_TOA'], 
+                    dayfirst=True,  # Especifica que o dia vem primeiro
+                    errors='coerce'
+                )
             
             # Otimiza memória
             self.dados = self.dados.copy()
