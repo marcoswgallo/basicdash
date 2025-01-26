@@ -541,48 +541,19 @@ class DashboardTecnicos:
             except Exception as e:
                 st.error(f"Erro na análise de status: {str(e)}")
 
+def load_css():
+    with open('style.css') as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
 def main():
     st.set_page_config(
         page_title="Dashboard de Produtividade",
         layout="wide",
-        initial_sidebar_state="expanded"  # Muda para expanded
+        initial_sidebar_state="expanded"
     )
     
-    # Adiciona CSS para deixar o menu fixo com cores ajustadas
-    st.markdown("""
-        <style>
-            section[data-testid="stSidebar"] {
-                width: 250px !important;
-                position: fixed !important;
-                background-color: #262730 !important;  /* Cor de fundo mais escura */
-                height: 100vh !important;
-                overflow: auto;
-            }
-            
-            section[data-testid="stSidebar"] > div {
-                height: 100vh !important;
-                width: 250px !important;
-                padding-top: 2rem;
-                padding-bottom: 2rem;
-                background-color: #262730 !important;  /* Mesma cor de fundo */
-            }
-            
-            section.main {
-                margin-left: 250px !important;
-                padding: 1rem 2rem !important;
-            }
-
-            /* Ajusta cor do texto no sidebar */
-            section[data-testid="stSidebar"] .element-container {
-                color: #FFFFFF !important;
-            }
-
-            /* Ajusta cor dos radio buttons */
-            section[data-testid="stSidebar"] .stRadio > label {
-                color: #FFFFFF !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+    # Carrega o CSS externo
+    load_css()
     
     # Adiciona um loader
     with st.spinner('Carregando dashboard...'):

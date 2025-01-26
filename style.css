@@ -1,0 +1,31 @@
+/* Estilo do menu lateral */
+section[data-testid="stSidebar"] {
+    width: 250px !important;
+    position: fixed !important;
+    background-color: #262730 !important;
+    height: 100vh !important;
+    overflow: auto;
+}
+
+section[data-testid="stSidebar"] > div {
+    height: 100vh !important;
+    width: 250px !important;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    background-color: #262730 !important;
+}
+
+/* Ajustes do conteúdo principal */
+section.main {
+    margin-left: 250px !important;
+    padding: 1rem 2rem !important;
+}
+
+/* Cores do texto no menu */
+section[data-testid="stSidebar"] .element-container {
+    color: #FFFFFF !important;
+}
+
+section[data-testid="stSidebar"] .stRadio > label {
+    color: #FFFFFF !important;
+} 
