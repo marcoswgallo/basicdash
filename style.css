@@ -74,4 +74,23 @@ section[data-testid="stSidebarContent"] {
 
 .stApp > header {
     background-color: transparent;
+}
+
+/* Estilo para o link da página inicial */
+.home-link {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: #262730;
+    color: white !important;
+    text-decoration: none;
+    border-radius: 0.3rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 1rem;
+    width: 100%;
+    text-align: center;
+}
+
+.home-link:hover {
+    background-color: #3c3c44;
+    border-color: rgba(255,255,255,0.2);
 } 

@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit_extras.switch_page_button import switch_page
 from streamlit_app import DashboardTecnicos, load_css
 
 def analise_inteligente(dados):
@@ -82,11 +84,17 @@ def main():
     
     load_css()
     
-    st.title("📊 Resumo por Base")
-    
-    # Menu na sidebar (para manter consistência)
+    # Menu na sidebar com link para página inicial
     with st.sidebar:
         st.title("🔧 Menu Principal")
+        
+        # Adiciona link para página inicial
+        st.markdown(
+            '<a href="/" target="_self" class="home-link">🏠 Página Inicial</a>', 
+            unsafe_allow_html=True
+        )
+    
+    st.title("📊 Resumo por Base")
     
     dashboard = DashboardTecnicos()
     arquivos = dashboard.listar_arquivos()
