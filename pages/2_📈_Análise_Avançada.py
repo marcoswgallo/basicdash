@@ -138,36 +138,77 @@ def analisar_produtividade_regional(dados):
         hide_index=True
     )
 
-def analisar_tipo_residencia(dados):
-    st.subheader("🏠 Análise por Tipo de Residência")
+def analisar_tipo_servico(dados):
+    st.subheader("🔧 Análise por Tipo de Serviço")
     
-    tipo_residencia = dados.groupby('TIPO RESIDÊNCIA').agg({
+    tipo_servico = dados.groupby('TIPO DE SERVIÇO').agg({
         'CONTRATO': 'count',
         'VALOR EMPRESA': ['sum', 'mean'],
         'TEMPO_MINUTOS': 'mean'
     }).round(2)
     
+    # Reseta o índice e ajusta os nomes das colunas
+    tipo_servico = tipo_servico.reset_index()
+    tipo_servico.columns = [
+        'TIPO DE SERVIÇO',
+        'TOTAL_CONTRATOS',
+        'VALOR_TOTAL',
+        'VALOR_MEDIO',
+        'TEMPO_MEDIO'
+    ]
+    
     col1, col2 = st.columns(2)
     
     with col1:
-        # Gráfico de pizza
+        # Gráfico de pizza para distribuição de contratos
         fig = px.pie(
-            tipo_residencia.reset_index(),
-            values=('CONTRATO', ''),
-            names='TIPO RESIDÊNCIA',
-            title='Distribuição por Tipo de Residência'
+            tipo_servico,
+            values='TOTAL_CONTRATOS',
+            names='TIPO DE SERVIÇO',
+            title='Distribuição por Tipo de Serviço',
+            hover_data=['VALOR_MEDIO']
         )
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Comparativo de valores
+        # Gráfico de barras para valor médio
         fig = px.bar(
-            tipo_residencia.reset_index(),
-            x='TIPO RESIDÊNCIA',
-            y=('VALOR EMPRESA', 'mean'),
-            title='Valor Médio por Tipo de Residência'
+            tipo_servico,
+            x='TIPO DE SERVIÇO',
+            y='VALOR_MEDIO',
+            title='Valor Médio por Tipo de Serviço',
+            text='TOTAL_CONTRATOS'
         )
+        
+        fig.update_traces(
+            texttemplate='%{text} contratos',
+            textposition='outside'
+        )
+        
         st.plotly_chart(fig, use_container_width=True)
+    
+    # Tabela resumo
+    st.write("### Resumo por Tipo de Serviço")
+    
+    # Formata a tabela
+    tabela_resumo = tipo_servico.copy()
+    tabela_resumo['VALOR_TOTAL'] = tabela_resumo['VALOR_TOTAL'].apply(lambda x: f"R$ {x:,.2f}")
+    tabela_resumo['VALOR_MEDIO'] = tabela_resumo['VALOR_MEDIO'].apply(lambda x: f"R$ {x:,.2f}")
+    tabela_resumo['TEMPO_MEDIO'] = tabela_resumo['TEMPO_MEDIO'].apply(lambda x: f"{x:.1f} min")
+    
+    tabela_resumo.columns = [
+        'Tipo de Serviço',
+        'Total Contratos',
+        'Valor Total',
+        'Valor Médio',
+        'Tempo Médio'
+    ]
+    
+    st.dataframe(
+        tabela_resumo,
+        use_container_width=True,
+        hide_index=True
+    )
 
 def analisar_horarios(dados):
     st.subheader("🕒 Análise de Horários")
@@ -376,7 +417,7 @@ def main():
             mostrar_kpis(dados_filtrados)
             analisar_tempo_execucao(dados_filtrados)
             analisar_produtividade_regional(dados_filtrados)
-            analisar_tipo_residencia(dados_filtrados)
+            analisar_tipo_servico(dados_filtrados)
             analisar_horarios(dados_filtrados)
             analisar_eficiencia_tecnicos(dados_filtrados)
             
