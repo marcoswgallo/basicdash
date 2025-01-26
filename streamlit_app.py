@@ -446,12 +446,22 @@ class DashboardTecnicos:
         Mostra os dados em formato de tabela similar ao Excel
         """
         try:
+            # Verifica se há dados
+            if len(dados_filtrados) == 0:
+                st.warning("Não há dados para gerar as tabelas com os filtros atuais")
+                return
+
             # Agrupa os dados por BASE
             tabela_base = dados_filtrados.groupby('BASE', as_index=False).agg({
                 'VALOR EMPRESA': 'sum',
                 'CONTRATO': 'count',
                 'TECNICO': 'nunique',
             })
+
+            # Verifica se há resultados após o agrupamento
+            if len(tabela_base) == 0:
+                st.warning("Não há dados agrupados para gerar as tabelas")
+                return
 
             # Calcula VL EQ (Valor por Equipe)
             tabela_base['VL EQ'] = tabela_base['VALOR EMPRESA'] / tabela_base['TECNICO']
@@ -500,10 +510,17 @@ class DashboardTecnicos:
                 ])
             )
 
-            # Tabela de Desconexão
+            # Para a tabela de desconexão
             desconexao = dados_filtrados[
                 dados_filtrados['TIPO DE SERVIÇO'].str.contains('DESCONEX', case=False, na=False)
-            ].groupby('BASE', as_index=False).agg({
+            ]
+
+            # Verifica se há dados de desconexão
+            if len(desconexao) == 0:
+                st.info("Não há dados de desconexão para os filtros selecionados")
+                return
+
+            desconexao = desconexao.groupby('BASE', as_index=False).agg({
                 'VALOR EMPRESA': 'sum',
                 'CONTRATO': 'count',
                 'TECNICO': 'nunique'
@@ -549,6 +566,9 @@ class DashboardTecnicos:
             )
         except Exception as e:
             st.error(f"Erro ao gerar tabelas: {str(e)}")
+            # Adiciona mais detalhes para debug
+            st.error(f"Quantidade de dados filtrados: {len(dados_filtrados)}")
+            st.error(f"Colunas disponíveis: {list(dados_filtrados.columns)}")
 
     def analisar_status(self):
         """
