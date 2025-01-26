@@ -7,25 +7,27 @@ def analise_inteligente(dados):
     """Gera insights automáticos dos dados"""
     insights = []
     
-    # Análise por Grupo
-    prod_por_grupo = dados.groupby('GRUPO').agg({
-        'CONTRATO': 'count',
-        'TECNICO': 'nunique',
-        'VALOR EMPRESA': 'sum'
-    })
-    
-    # Produtividade por grupo
-    prod_por_tecnico_grupo = prod_por_grupo['CONTRATO'] / prod_por_grupo['TECNICO']
-    melhor_grupo = prod_por_tecnico_grupo.idxmax()
-    
-    insights.append(f"📊 O grupo mais produtivo é **{melhor_grupo}** com média de "
-                   f"**{prod_por_tecnico_grupo[melhor_grupo]:.1f}** contratos por técnico")
-    
-    # Distribuição por grupo
-    for grupo in prod_por_grupo.index:
-        total_grupo = prod_por_grupo.loc[grupo, 'CONTRATO']
-        perc_grupo = (total_grupo / dados['CONTRATO'].count()) * 100
-        insights.append(f"📌 Grupo **{grupo}**: representa **{perc_grupo:.1f}%** dos contratos")
+    # Verifica se a coluna GRUPO existe
+    if 'GRUPO' in dados.columns:
+        # Análise por Grupo
+        prod_por_grupo = dados.groupby('GRUPO').agg({
+            'CONTRATO': 'count',
+            'TECNICO': 'nunique',
+            'VALOR EMPRESA': 'sum'
+        })
+        
+        # Produtividade por grupo
+        prod_por_tecnico_grupo = prod_por_grupo['CONTRATO'] / prod_por_grupo['TECNICO']
+        melhor_grupo = prod_por_tecnico_grupo.idxmax()
+        
+        insights.append(f"📊 O grupo mais produtivo é **{melhor_grupo}** com média de "
+                       f"**{prod_por_tecnico_grupo[melhor_grupo]:.1f}** contratos por técnico")
+        
+        # Distribuição por grupo
+        for grupo in prod_por_grupo.index:
+            total_grupo = prod_por_grupo.loc[grupo, 'CONTRATO']
+            perc_grupo = (total_grupo / dados['CONTRATO'].count()) * 100
+            insights.append(f"📌 Grupo **{grupo}**: representa **{perc_grupo:.1f}%** dos contratos")
     
     # 1. Análise de Produtividade
     prod_por_base = dados.groupby('BASE').agg({
@@ -93,20 +95,26 @@ def main():
     arquivo = arquivos[0]  # Usa o primeiro arquivo encontrado
     
     if dashboard.carregar_dados(arquivo):
-        # Usa todos os dados sem filtros
-        dashboard.mostrar_tabela_bases(dashboard.dados)
-        
-        # Adiciona seção de insights
-        st.write("## 🧠 Análise Inteligente")
-        
-        with st.spinner("Gerando insights..."):
-            insights = analise_inteligente(dashboard.dados)
+        # Verifica se os dados foram carregados corretamente
+        if dashboard.dados is not None:
+            # Usa todos os dados sem filtros
+            dashboard.mostrar_tabela_bases(dashboard.dados)
             
-            # Mostra insights em cards
-            cols = st.columns(2)
-            for i, insight in enumerate(insights):
-                with cols[i % 2]:
-                    st.info(insight)
+            # Adiciona seção de insights
+            st.write("## 🧠 Análise Inteligente")
+            
+            with st.spinner("Gerando insights..."):
+                try:
+                    insights = analise_inteligente(dashboard.dados)
+                    
+                    # Mostra insights em cards
+                    cols = st.columns(2)
+                    for i, insight in enumerate(insights):
+                        with cols[i % 2]:
+                            st.info(insight)
+                except Exception as e:
+                    st.error(f"Erro ao gerar insights: {str(e)}")
+                    st.error("Verifique se todas as colunas necessárias estão presentes nos dados")
         
         # Adiciona análises comparativas
         st.write("## 📊 Análises Comparativas")
