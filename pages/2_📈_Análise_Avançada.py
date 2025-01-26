@@ -211,41 +211,92 @@ def analisar_tipo_servico(dados):
     )
 
 def analisar_horarios(dados):
-    st.subheader("🕒 Análise de Horários")
+    st.subheader("🕒 Análise por Período")
     
-    dados['HORA_INICIO'] = pd.to_datetime(dados['HORA_INICIO']).dt.hour
+    # Usa a hora da DATA_TOA
+    dados['HORA'] = dados['DATA_TOA'].dt.hour
     
-    prod_horario = dados.groupby('HORA_INICIO').agg({
-        'CONTRATO': 'count',
-        'VALOR EMPRESA': 'sum',
-        'STATUS': lambda x: (x == 'Executado').mean() * 100
-    }).rename(columns={'STATUS': 'TAXA_SUCESSO'})
+    col1, col2 = st.columns(2)
     
-    # Gráfico de linha do tempo
-    fig = go.Figure()
+    with col1:
+        # Análise por hora do dia
+        prod_horario = dados.groupby('HORA').agg({
+            'CONTRATO': 'count',
+            'VALOR EMPRESA': 'sum',
+            'STATUS': lambda x: (x == 'Executado').mean() * 100
+        }).reset_index()
+        
+        fig = px.bar(
+            prod_horario,
+            x='HORA',
+            y='CONTRATO',
+            title='Distribuição de Serviços por Hora',
+            labels={
+                'HORA': 'Hora do Dia',
+                'CONTRATO': 'Quantidade de Serviços'
+            },
+            text='CONTRATO'
+        )
+        
+        fig.update_traces(
+            texttemplate='%{text}',
+            textposition='outside'
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
     
-    fig.add_trace(go.Scatter(
-        x=prod_horario.index,
-        y=prod_horario['CONTRATO'],
-        name='Quantidade de Contratos',
-        mode='lines+markers'
-    ))
+    with col2:
+        # Análise por dia da semana
+        prod_dia = dados.groupby('DIA_SEMANA').agg({
+            'CONTRATO': 'count',
+            'VALOR EMPRESA': 'mean',
+            'STATUS': lambda x: (x == 'Executado').mean() * 100
+        }).reset_index()
+        
+        # Ordena os dias da semana
+        ordem_dias = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        prod_dia['DIA_SEMANA'] = pd.Categorical(prod_dia['DIA_SEMANA'], categories=ordem_dias, ordered=True)
+        prod_dia = prod_dia.sort_values('DIA_SEMANA')
+        
+        fig = px.bar(
+            prod_dia,
+            x='DIA_SEMANA',
+            y='CONTRATO',
+            title='Distribuição de Serviços por Dia da Semana',
+            labels={
+                'DIA_SEMANA': 'Dia da Semana',
+                'CONTRATO': 'Quantidade de Serviços'
+            },
+            text='CONTRATO'
+        )
+        
+        fig.update_traces(
+            texttemplate='%{text}',
+            textposition='outside'
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
     
-    fig.add_trace(go.Scatter(
-        x=prod_horario.index,
-        y=prod_horario['TAXA_SUCESSO'],
-        name='Taxa de Sucesso (%)',
-        mode='lines+markers',
-        yaxis='y2'
-    ))
+    # Tabela resumo
+    st.write("### Resumo por Período")
     
-    fig.update_layout(
-        title='Produtividade por Hora do Dia',
-        yaxis=dict(title='Quantidade de Contratos'),
-        yaxis2=dict(title='Taxa de Sucesso (%)', overlaying='y', side='right')
+    # Prepara dados para a tabela
+    tabela_resumo = prod_horario.copy()
+    tabela_resumo['VALOR EMPRESA'] = tabela_resumo['VALOR EMPRESA'].apply(lambda x: f"R$ {x:,.2f}")
+    tabela_resumo['STATUS'] = tabela_resumo['STATUS'].apply(lambda x: f"{x:.1f}%")
+    
+    tabela_resumo.columns = [
+        'Hora',
+        'Total Serviços',
+        'Valor Total',
+        'Taxa de Sucesso'
+    ]
+    
+    st.dataframe(
+        tabela_resumo,
+        use_container_width=True,
+        hide_index=True
     )
-    
-    st.plotly_chart(fig, use_container_width=True)
 
 def analisar_eficiencia_tecnicos(dados):
     st.subheader("👨‍🔧 Análise de Eficiência dos Técnicos")
