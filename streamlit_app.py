@@ -548,13 +548,13 @@ def main():
         initial_sidebar_state="expanded"  # Muda para expanded
     )
     
-    # Adiciona CSS para deixar o menu fixo
+    # Adiciona CSS para deixar o menu fixo com cores ajustadas
     st.markdown("""
         <style>
             section[data-testid="stSidebar"] {
                 width: 250px !important;
                 position: fixed !important;
-                background-color: #f0f2f6 !important;
+                background-color: #262730 !important;  /* Cor de fundo mais escura */
                 height: 100vh !important;
                 overflow: auto;
             }
@@ -564,11 +564,22 @@ def main():
                 width: 250px !important;
                 padding-top: 2rem;
                 padding-bottom: 2rem;
+                background-color: #262730 !important;  /* Mesma cor de fundo */
             }
             
             section.main {
                 margin-left: 250px !important;
                 padding: 1rem 2rem !important;
+            }
+
+            /* Ajusta cor do texto no sidebar */
+            section[data-testid="stSidebar"] .element-container {
+                color: #FFFFFF !important;
+            }
+
+            /* Ajusta cor dos radio buttons */
+            section[data-testid="stSidebar"] .stRadio > label {
+                color: #FFFFFF !important;
             }
         </style>
     """, unsafe_allow_html=True)
