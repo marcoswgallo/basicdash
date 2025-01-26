@@ -159,15 +159,40 @@ def analisar_eficiencia_tecnicos(dados):
 
 def preparar_dados(dados):
     """Prepara os dados para análise, criando colunas calculadas"""
-    dados = dados.copy()
+    try:
+        dados = dados.copy()
+        
+        # Verifica as colunas disponíveis
+        st.write("Colunas disponíveis:", dados.columns.tolist())
+        
+        # Converte datas
+        if 'DATA_TOA' in dados.columns:
+            dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
+        
+        # Tenta diferentes nomes possíveis para as colunas de hora
+        hora_inicio_cols = ['HORA_INICIO', 'HORA INICIO', 'INICIO']
+        hora_fim_cols = ['HORA_FIM', 'HORA FIM', 'FIM']
+        
+        # Encontra as colunas corretas
+        hora_inicio = next((col for col in hora_inicio_cols if col in dados.columns), None)
+        hora_fim = next((col for col in hora_fim_cols if col in dados.columns), None)
+        
+        if hora_inicio and hora_fim:
+            dados['HORA_INICIO'] = pd.to_datetime(dados[hora_inicio])
+            dados['HORA_FIM'] = pd.to_datetime(dados[hora_fim])
+            dados['TEMPO_EXECUCAO'] = dados['HORA_FIM'] - dados['HORA_INICIO']
+            dados['TEMPO_MINUTOS'] = dados['TEMPO_EXECUCAO'].dt.total_seconds() / 60
+        else:
+            # Se não encontrar as colunas de hora, cria uma coluna de tempo padrão
+            st.warning("Colunas de hora não encontradas. Usando valor padrão para tempo.")
+            dados['TEMPO_MINUTOS'] = 60  # valor padrão de 1 hora
+        
+        return dados
     
-    # Converte e calcula tempos
-    dados['HORA_INICIO'] = pd.to_datetime(dados['HORA_INICIO'])
-    dados['HORA_FIM'] = pd.to_datetime(dados['HORA_FIM'])
-    dados['TEMPO_EXECUCAO'] = dados['HORA_FIM'] - dados['HORA_INICIO']
-    dados['TEMPO_MINUTOS'] = dados['TEMPO_EXECUCAO'].dt.total_seconds() / 60
-    
-    return dados
+    except Exception as e:
+        st.error(f"Erro ao preparar dados: {str(e)}")
+        st.error(f"Colunas disponíveis: {', '.join(dados.columns)}")
+        raise e
 
 def mostrar_kpis(dados):
     st.subheader("📊 KPIs Principais")
@@ -219,6 +244,7 @@ def main():
         return
         
     arquivo = arquivos[0]
+    dados = None
     
     if dashboard.carregar_dados(arquivo):
         try:
@@ -228,8 +254,10 @@ def main():
             # Filtros
             st.sidebar.title("Filtros")
             
-            # Converte datas para datetime
-            dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
+            # Converte datas para datetime se necessário
+            if not pd.api.types.is_datetime64_any_dtype(dados['DATA_TOA']):
+                dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
+            
             data_min_default = dados['DATA_TOA'].min().date()
             data_max_default = dados['DATA_TOA'].max().date()
             
@@ -287,8 +315,9 @@ def main():
             
         except Exception as e:
             st.error(f"Erro ao processar os dados: {str(e)}")
-            st.error("Por favor, verifique o formato das datas nos dados")
-            st.error("Colunas disponíveis: " + ", ".join(dados.columns))
+            if dados is not None:
+                st.error(f"Colunas disponíveis: {', '.join(dados.columns)}")
+            st.error("Por favor, verifique o formato dos dados")
 
 if __name__ == "__main__":
     main() 
