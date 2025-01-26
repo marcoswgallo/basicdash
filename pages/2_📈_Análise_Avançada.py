@@ -64,27 +64,79 @@ def analisar_tempo_execucao(dados):
         st.plotly_chart(fig, use_container_width=True)
 
 def analisar_produtividade_regional(dados):
-    st.subheader("🗺️ Análise Regional")
+    st.subheader("🗺️ Análise Regional por Base")
     
-    prod_regional = dados.groupby(['CIDADE', 'BAIRRO']).agg({
+    # Agrupa por BASE
+    prod_regional = dados.groupby('BASE').agg({
         'CONTRATO': 'count',
         'VALOR EMPRESA': 'sum',
         'TECNICO': 'nunique'
     }).reset_index()
     
-    prod_regional['CONTRATOS_POR_TECNICO'] = prod_regional['CONTRATO'] / prod_regional['TECNICO']
-    prod_regional['VALOR_MEDIO_CONTRATO'] = prod_regional['VALOR EMPRESA'] / prod_regional['CONTRATO']
+    # Calcula métricas
+    prod_regional['CONTRATOS_POR_TECNICO'] = (prod_regional['CONTRATO'] / 
+                                             prod_regional['TECNICO']).round(2)
+    prod_regional['VALOR_MEDIO_CONTRATO'] = (prod_regional['VALOR EMPRESA'] / 
+                                            prod_regional['CONTRATO']).round(2)
     
-    # Mapa de calor por cidade/bairro
-    fig = px.treemap(
-        prod_regional,
-        path=[px.Constant("Total"), 'CIDADE', 'BAIRRO'],
-        values='CONTRATO',
-        color='VALOR_MEDIO_CONTRATO',
-        title='Distribuição de Contratos por Região',
-        color_continuous_scale='RdYlBu'
+    # Visualizações
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Gráfico de barras para contratos por técnico
+        fig = px.bar(
+            prod_regional,
+            x='BASE',
+            y='CONTRATOS_POR_TECNICO',
+            title='Produtividade por Base',
+            labels={
+                'BASE': 'Base',
+                'CONTRATOS_POR_TECNICO': 'Contratos por Técnico'
+            },
+            text='CONTRATOS_POR_TECNICO'
+        )
+        
+        fig.update_traces(
+            texttemplate='%{text:.1f}',
+            textposition='outside'
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Gráfico de pizza para distribuição de valor
+        fig = px.pie(
+            prod_regional,
+            values='VALOR EMPRESA',
+            names='BASE',
+            title='Distribuição de Valor por Base',
+            hover_data=['CONTRATOS_POR_TECNICO', 'VALOR_MEDIO_CONTRATO']
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Tabela resumo
+    st.write("### Resumo por Base")
+    
+    # Formata a tabela
+    tabela_resumo = prod_regional.copy()
+    tabela_resumo['VALOR EMPRESA'] = tabela_resumo['VALOR EMPRESA'].apply(lambda x: f"R$ {x:,.2f}")
+    tabela_resumo['VALOR_MEDIO_CONTRATO'] = tabela_resumo['VALOR_MEDIO_CONTRATO'].apply(lambda x: f"R$ {x:,.2f}")
+    
+    tabela_resumo.columns = [
+        'Base',
+        'Total Contratos',
+        'Valor Total',
+        'Total Técnicos',
+        'Contratos/Técnico',
+        'Valor Médio/Contrato'
+    ]
+    
+    st.dataframe(
+        tabela_resumo,
+        use_container_width=True,
+        hide_index=True
     )
-    st.plotly_chart(fig, use_container_width=True)
 
 def analisar_tipo_residencia(dados):
     st.subheader("🏠 Análise por Tipo de Residência")
