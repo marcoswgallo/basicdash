@@ -259,9 +259,6 @@ class DashboardTecnicos:
                 st.warning("Nenhum dado encontrado para os filtros selecionados")
                 return
             
-            # Mostra quantidade de registros após filtros
-            st.info(f"Mostrando {len(dados_filtrados):,} registros que atendem aos filtros selecionados")
-            
             # Adiciona métricas por base
             st.write("### Métricas por Base")
             metricas_base = dados_filtrados.groupby('BASE').agg({
@@ -548,12 +545,36 @@ def main():
     st.set_page_config(
         page_title="Dashboard de Produtividade",
         layout="wide",
-        initial_sidebar_state="collapsed"
+        initial_sidebar_state="expanded"  # Muda para expanded
     )
+    
+    # Adiciona CSS para deixar o menu fixo
+    st.markdown("""
+        <style>
+            section[data-testid="stSidebar"] {
+                width: 250px !important;
+                position: fixed !important;
+                background-color: #f0f2f6 !important;
+                height: 100vh !important;
+                overflow: auto;
+            }
+            
+            section[data-testid="stSidebar"] > div {
+                height: 100vh !important;
+                width: 250px !important;
+                padding-top: 2rem;
+                padding-bottom: 2rem;
+            }
+            
+            section.main {
+                margin-left: 250px !important;
+                padding: 1rem 2rem !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
     
     # Adiciona um loader
     with st.spinner('Carregando dashboard...'):
-        # Adiciona um menu mais intuitivo
         menu_items = {
             "Produtividade dos Técnicos": "📊",
             "Status dos Serviços": "📈"
@@ -585,7 +606,6 @@ def main():
                 )
             else:
                 arquivo = arquivos[0]
-                st.info(f"Arquivo carregado: {arquivo}")
             
             if dashboard.carregar_dados(arquivo):
                 if selected == "Produtividade dos Técnicos":
@@ -594,7 +614,7 @@ def main():
                     dashboard.analisar_produtividade()
                 else:
                     st.title("Dashboard de Status dos Serviços")
-                    dashboard.analisar_status()  # Novo método para análise de status
+                    dashboard.analisar_status()
 
 if __name__ == "__main__":
     main() 
