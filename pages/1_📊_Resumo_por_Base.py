@@ -168,18 +168,8 @@ def main():
             if status_selecionados:
                 dados_filtrados = dados_filtrados[dados_filtrados['STATUS'].isin(status_selecionados)]
             
-            # Remove bases com valores zerados
-            dados_agrupados = dados_filtrados.groupby('BASE').agg({
-                'CONTRATO': 'count',
-                'VALOR EMPRESA': 'sum'
-            }).reset_index()
-            
-            bases_ativas = dados_agrupados[
-                (dados_agrupados['CONTRATO'] > 0) | 
-                (dados_agrupados['VALOR EMPRESA'] > 0)
-            ]['BASE'].unique()
-            
-            dados_filtrados = dados_filtrados[dados_filtrados['BASE'].isin(bases_ativas)]
+            # Mostra as tabelas com os dados filtrados
+            dashboard.mostrar_tabela_bases(dados_filtrados)
             
             # Adiciona métricas dinâmicas
             col1, col2, col3, col4 = st.columns(4)
@@ -224,9 +214,6 @@ def main():
                     (' > ' if grupo_selecionado != 'Todos' and base_selecionada != 'Todas' else '') +
                     (f"Base **{base_selecionada}**" if base_selecionada != 'Todas' else '')
                 )
-            
-            # Mostra as tabelas com os dados filtrados
-            dashboard.mostrar_tabela_bases(dados_filtrados, grupo_selecionado)
             
             # Continua com as análises...
             with st.spinner("Gerando insights..."):
