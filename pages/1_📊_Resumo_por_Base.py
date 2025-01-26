@@ -83,19 +83,14 @@ def main():
     
     load_css()
     
-    # Menu na sidebar com link para página inicial
+    # Menu na sidebar com botão para página inicial
     with st.sidebar:
         st.title("🔧 Menu Principal")
         
-        # Adiciona link para página inicial usando markdown
-        st.markdown(
-            '<a href="/" target="_self" class="home-link">🏠 Página Inicial</a>', 
-            unsafe_allow_html=True
-        )
-        
-        # Alternativa usando botão do Streamlit
-        if st.button("🏠 Voltar para Página Inicial", use_container_width=True):
-            st.switch_page("streamlit_app.py")
+        # Adiciona botão para página inicial
+        if st.button("🏠 Página Inicial", use_container_width=True):
+            st.session_state.page = "main"
+            st._rerun()
     
     st.title("📊 Resumo por Base")
     
