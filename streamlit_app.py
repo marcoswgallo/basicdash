@@ -259,9 +259,6 @@ class DashboardTecnicos:
                 st.warning("Nenhum dado encontrado para os filtros selecionados")
                 return
             
-            # Após aplicar os filtros e antes dos gráficos
-            self.mostrar_tabela_bases(dados_filtrados)
-            
             # Adiciona métricas por base
             st.write("### Métricas por Base")
             metricas_base = dados_filtrados.groupby('BASE').agg({
