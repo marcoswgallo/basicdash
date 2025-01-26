@@ -17,13 +17,27 @@ def analisar_tempo_execucao(dados):
             'TEMPO_MINUTOS': ['mean', 'count']
         }).round(2)
         
+        # Reseta o índice e ajusta os nomes das colunas
+        tempo_servico = tempo_servico.reset_index()
+        tempo_servico.columns = ['TIPO DE SERVIÇO', 'TEMPO_MEDIO', 'QUANTIDADE']
+        
         fig = px.bar(
-            tempo_servico.reset_index(),
+            tempo_servico,
             x='TIPO DE SERVIÇO',
-            y=('TEMPO_MINUTOS', 'mean'),
+            y='TEMPO_MEDIO',
             title='Tempo Médio por Tipo de Serviço (minutos)',
-            labels={'TEMPO_MINUTOS': 'Minutos', 'count': 'Quantidade'}
+            labels={
+                'TIPO DE SERVIÇO': 'Tipo de Serviço',
+                'TEMPO_MEDIO': 'Tempo Médio (min)',
+            },
+            text='QUANTIDADE'
         )
+        
+        fig.update_traces(
+            texttemplate='%{text} serviços',
+            textposition='outside'
+        )
+        
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
@@ -32,8 +46,21 @@ def analisar_tempo_execucao(dados):
             dados,
             x='TEMPO_MINUTOS',
             title='Distribuição do Tempo de Execução',
-            nbins=30
+            nbins=30,
+            labels={
+                'TEMPO_MINUTOS': 'Tempo (minutos)',
+                'count': 'Quantidade'
+            }
         )
+        
+        # Adiciona linha vertical com a média
+        fig.add_vline(
+            x=dados['TEMPO_MINUTOS'].mean(),
+            line_dash="dash",
+            line_color="red",
+            annotation_text=f"Média: {dados['TEMPO_MINUTOS'].mean():.1f} min"
+        )
+        
         st.plotly_chart(fig, use_container_width=True)
 
 def analisar_produtividade_regional(dados):
