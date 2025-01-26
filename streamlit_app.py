@@ -125,9 +125,6 @@ class DashboardTecnicos:
         Carrega e processa os dados de forma otimizada
         """
         try:
-            if "Relatorio_Financeiro" not in nome_arquivo:
-                st.warning("⚠️ Atenção: O arquivo não parece ser um Relatório Financeiro padrão")
-            
             if self.cached_file == nome_arquivo and self.dados is not None:
                 return True
                 
@@ -136,73 +133,27 @@ class DashboardTecnicos:
                 del self.dados
                 gc.collect()
                 
-            # Adiciona validações específicas para o Relatório Financeiro
-            try:
-                self.dados = self.carregar_dados_cache_alt(
-                    self.pasta_dados, 
-                    nome_arquivo, 
-                    self.colunas_necessarias,
-                    self.dtypes
+            # Carrega dados com otimizações
+            self.dados = self.carregar_dados_cache_alt(
+                self.pasta_dados, 
+                nome_arquivo, 
+                self.colunas_necessarias,
+                self.dtypes
+            )
+            self.cached_file = nome_arquivo
+            
+            # Otimiza processamento de datas
+            if 'DATA_TOA' in self.dados.columns:
+                self.dados['DATA_TOA'] = pd.to_datetime(
+                    self.dados['DATA_TOA'],
+                    dayfirst=True,  # Especifica que o dia vem primeiro
+                    errors='coerce'
                 )
-                
-                # Validações específicas do Relatório Financeiro
-                validacoes = {
-                    'VALOR TÉCNICO': lambda x: x >= 0,
-                    'VALOR EMPRESA': lambda x: x >= 0,
-                    'STATUS': lambda x: x.notna(),
-                    'TECNICO': lambda x: x.notna(),
-                    'BASE': lambda x: x.notna()
-                }
-                
-                for coluna, validacao in validacoes.items():
-                    invalidos = ~self.dados[coluna].apply(validacao)
-                    if invalidos.any():
-                        st.warning(f"⚠️ Encontrados {invalidos.sum()} registros com {coluna} inválidos")
-                
-                # Verifica valores zerados
-                valores_zerados = (self.dados['VALOR TÉCNICO'] == 0).sum()
-                if valores_zerados > 0:
-                    st.warning(f"⚠️ Existem {valores_zerados} registros com valor zero")
-                
-                self.cached_file = nome_arquivo
-                
-                # Otimiza processamento de datas
-                if 'DATA_TOA' in self.dados.columns:
-                    # Tenta diferentes formatos de data comuns no Brasil
-                    try:
-                        self.dados['DATA_TOA'] = pd.to_datetime(
-                            self.dados['DATA_TOA'],
-                            format='%d/%m/%Y',
-                            errors='coerce'
-                        )
-                    except:
-                        try:
-                            self.dados['DATA_TOA'] = pd.to_datetime(
-                                self.dados['DATA_TOA'],
-                                format='%d/%m/%Y %H:%M:%S',
-                                errors='coerce'
-                            )
-                        except:
-                            # Se nenhum formato específico funcionar, usa dayfirst
-                            self.dados['DATA_TOA'] = pd.to_datetime(
-                                self.dados['DATA_TOA'],
-                                dayfirst=True,
-                                errors='coerce'
-                            )
-                    
-                    # Verifica se há datas inválidas
-                    datas_invalidas = self.dados['DATA_TOA'].isna().sum()
-                    if datas_invalidas > 0:
-                        st.warning(f"Atenção: {datas_invalidas} datas não puderam ser processadas")
-                
-                # Otimiza memória
-                self.dados = self.dados.copy()
-                
-                return True
-                
-            except Exception as e:
-                st.error(f"Erro ao processar o Relatório Financeiro: {e}")
-                return False
+            
+            # Otimiza memória
+            self.dados = self.dados.copy()
+            
+            return True
             
         except Exception as e:
             st.error(f"Erro ao carregar arquivo: {e}")
@@ -217,46 +168,13 @@ class DashboardTecnicos:
             total_tecnicos = self.dados['TECNICO'].nunique()
             total_bases = self.dados['BASE'].nunique()
             
-            # Adiciona um indicador de período
-            periodo = f"Período: {self.dados['DATA_TOA'].min().strftime('%d/%m/%Y')} até {self.dados['DATA_TOA'].max().strftime('%d/%m/%Y')}"
-            st.info(periodo)
-            
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Total de Registros", f"{total_registros:,}")
             with col2:
                 st.metric("Total de Técnicos", total_tecnicos)
             with col3:
                 st.metric("Total de Bases", total_bases)
-            with col4:
-                valor_total = self.dados['VALOR EMPRESA'].sum()
-                st.metric("Valor Total", f"R$ {valor_total:,.2f}")
-            
-            # Adiciona métricas financeiras
-            st.write("### 📊 Métricas Financeiras")
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                valor_medio_tecnico = self.dados['VALOR TÉCNICO'].mean()
-                st.metric(
-                    "Valor Médio por Técnico", 
-                    f"R$ {valor_medio_tecnico:,.2f}"
-                )
-                
-            with col2:
-                valor_medio_empresa = self.dados['VALOR EMPRESA'].mean()
-                st.metric(
-                    "Valor Médio por Empresa",
-                    f"R$ {valor_medio_empresa:,.2f}"
-                )
-                
-            with col3:
-                margem = ((self.dados['VALOR EMPRESA'].sum() - self.dados['VALOR TÉCNICO'].sum()) 
-                         / self.dados['VALOR EMPRESA'].sum() * 100)
-                st.metric(
-                    "Margem Média",
-                    f"{margem:.1f}%"
-                )
 
     def analisar_produtividade(self):
         if self.dados is None:
