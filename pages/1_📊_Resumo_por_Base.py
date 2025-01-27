@@ -11,7 +11,7 @@ def analise_inteligente(dados):
     # Verifica se a coluna GRUPO existe
     if 'GRUPO' in dados.columns:
         # Análise por Grupo
-        prod_por_grupo = dados.groupby('GRUPO').agg({
+        prod_por_grupo = dados.groupby('GRUPO', observed=True).agg({
             'CONTRATO': 'count',
             'TECNICO': 'nunique',
             'VALOR EMPRESA': 'sum'
@@ -31,7 +31,7 @@ def analise_inteligente(dados):
             insights.append(f"📌 Grupo **{grupo}**: representa **{perc_grupo:.1f}%** dos contratos")
     
     # 1. Análise de Produtividade
-    prod_por_base = dados.groupby('BASE').agg({
+    prod_por_base = dados.groupby('BASE', observed=True).agg({
         'CONTRATO': 'count',
         'TECNICO': 'nunique',
         'VALOR EMPRESA': 'sum'
@@ -233,7 +233,7 @@ def main():
             
             with col1:
                 # Gráfico de Eficiência
-                dados_eficiencia = dados_filtrados.groupby('BASE').agg({
+                dados_eficiencia = dados_filtrados.groupby('BASE', observed=True).agg({
                     'CONTRATO': 'count',
                     'TECNICO': 'nunique'
                 }).reset_index()
@@ -265,7 +265,7 @@ def main():
             
             with col2:
                 # Gráfico de Rentabilidade
-                dados_rent = dados_filtrados.groupby('BASE').agg({
+                dados_rent = dados_filtrados.groupby('BASE', observed=True).agg({
                     'VALOR EMPRESA': 'sum',
                     'TECNICO': 'nunique'
                 }).reset_index()
