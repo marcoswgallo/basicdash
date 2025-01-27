@@ -247,7 +247,7 @@ def analisar_horarios(dados):
     
     with col2:
         # Análise por dia da semana
-        prod_dia = dados.groupby('DIA_SEMANA').agg({
+        prod_dia = dados.groupby('DIA_SEMANA', observed=True).agg({
             'CONTRATO': 'count',
             'VALOR EMPRESA': 'mean',
             'STATUS': lambda x: (x == 'Executado').mean() * 100

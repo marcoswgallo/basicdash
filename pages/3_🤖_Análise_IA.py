@@ -172,7 +172,7 @@ def analisar_clusters_tecnicos(dados):
     
     try:
         # Prepara dados dos técnicos
-        metricas_tecnicos = dados.groupby('TECNICO').agg({
+        metricas_tecnicos = dados.groupby('TECNICO', observed=True).agg({
             'CONTRATO': 'count',
             'VALOR EMPRESA': 'mean',
             'TEMPO_MINUTOS': 'mean',
@@ -299,12 +299,12 @@ def gerar_recomendacoes(dados):
         # Análise de padrões de sucesso
         dados_sucesso = dados[dados['STATUS'] == 'Executado']
         
-        # Melhores horários (com observed=True)
+        # Melhores horários
         melhores_horarios = dados_sucesso.groupby('HORA', observed=True)['CONTRATO'].count()
         pior_horario = melhores_horarios.idxmin()
         melhor_horario = melhores_horarios.idxmax()
         
-        # Melhores técnicos (com observed=True)
+        # Melhores técnicos
         melhores_tecnicos = dados_sucesso.groupby('TECNICO', observed=True).agg({
             'CONTRATO': 'count',
             'VALOR EMPRESA': 'mean',

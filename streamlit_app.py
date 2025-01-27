@@ -377,7 +377,7 @@ class DashboardTecnicos:
             
             # Adiciona métricas por base
             st.write("### Métricas por Base")
-            metricas_base = dados_filtrados.groupby('BASE').agg({
+            metricas_base = dados_filtrados.groupby('BASE', observed=True).agg({
                 'TECNICO': 'nunique',
                 'CONTRATO': 'nunique',
                 'VALOR TÉCNICO': 'sum',
@@ -468,7 +468,7 @@ class DashboardTecnicos:
             if base_selecionada != 'Todas':
                 servicos_analise = dados_filtrados.groupby([
                     'TIPO DE SERVIÇO'
-                ])['CONTRATO'].nunique().reset_index()
+                ], observed=True)['CONTRATO'].nunique().reset_index()
                 
                 # Ordena por quantidade de contratos
                 servicos_analise = servicos_analise.sort_values('CONTRATO', ascending=False)
@@ -484,7 +484,7 @@ class DashboardTecnicos:
                 servicos_analise = dados_filtrados.groupby([
                     'BASE',
                     'TIPO DE SERVIÇO'
-                ])['CONTRATO'].nunique().reset_index()
+                ], observed=True)['CONTRATO'].nunique().reset_index()
                 
                 # Ordena por quantidade de contratos
                 servicos_analise = servicos_analise.sort_values(['BASE', 'CONTRATO'], ascending=[True, False])
@@ -751,7 +751,7 @@ class DashboardTecnicos:
                     dados_filtrados = self.dados
                 
                 # Análise de Status
-                status_count = dados_filtrados.groupby('STATUS')['CONTRATO'].nunique().reset_index()
+                status_count = dados_filtrados.groupby('STATUS', observed=True)['CONTRATO'].nunique().reset_index()
                 status_count.columns = ['Status', 'Quantidade']
                 status_count = status_count.sort_values('Quantidade', ascending=True)
                 
@@ -781,7 +781,7 @@ class DashboardTecnicos:
                 status_temporal = dados_filtrados.groupby([
                     dados_filtrados['DATA_TOA'].dt.date,
                     'STATUS'
-                ])['CONTRATO'].nunique().reset_index()
+                ], observed=True)['CONTRATO'].nunique().reset_index()
                 
                 fig = px.line(status_temporal,
                             x='DATA_TOA',
@@ -799,7 +799,7 @@ class DashboardTecnicos:
                 
                 # Tabela resumo
                 st.write("### Resumo por Status")
-                resumo_status = dados_filtrados.groupby('STATUS').agg({
+                resumo_status = dados_filtrados.groupby('STATUS', observed=True).agg({
                     'CONTRATO': 'nunique',
                     'VALOR TÉCNICO': 'sum',
                     'VALOR EMPRESA': 'sum'
