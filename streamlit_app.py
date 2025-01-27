@@ -867,13 +867,26 @@ def main():
                 arquivo = arquivos[0]
             
             if dashboard.carregar_dados(arquivo):
-                if selected == "Produtividade dos Técnicos":
-                    st.title("Dashboard de Produtividade - Técnicos")
-                    dashboard.mostrar_dados_basicos()
-                    dashboard.analisar_produtividade()
-                else:
-                    st.title("Dashboard de Status dos Serviços")
-                    dashboard.analisar_status()
+                try:
+                    # Carrega e prepara os dados
+                    dados = preparar_dados(dashboard.dados)
+                    
+                    # Chame a função de análise de clusters aqui
+                    analisar_clusters_tecnicos(dados)
+                    
+                    if selected == "Produtividade dos Técnicos":
+                        st.title("Dashboard de Produtividade - Técnicos")
+                        dashboard.mostrar_dados_basicos()
+                        dashboard.analisar_produtividade()
+                    else:
+                        st.title("Dashboard de Status dos Serviços")
+                        dashboard.analisar_status()
+                    
+                except Exception as e:
+                    st.error(f"Erro ao processar os dados: {str(e)}")
+                    if dados is not None:
+                        st.error(f"Colunas disponíveis: {', '.join(dados.columns)}")
+                    st.error("Por favor, verifique o formato dos dados")
 
 if __name__ == "__main__":
     main() 
