@@ -13,7 +13,7 @@ def analisar_tempo_execucao(dados):
     
     with col1:
         # Tempo médio por tipo de serviço
-        tempo_servico = dados.groupby('TIPO DE SERVIÇO').agg({
+        tempo_servico = dados.groupby('TIPO DE SERVIÇO', observed=True).agg({
             'TEMPO_MINUTOS': ['mean', 'count']
         }).round(2)
         
@@ -67,7 +67,7 @@ def analisar_produtividade_regional(dados):
     st.subheader("🗺️ Análise Regional por Base")
     
     # Agrupa por BASE
-    prod_regional = dados.groupby('BASE').agg({
+    prod_regional = dados.groupby('BASE', observed=True).agg({
         'CONTRATO': 'count',
         'VALOR EMPRESA': 'sum',
         'TECNICO': 'nunique'
@@ -141,7 +141,7 @@ def analisar_produtividade_regional(dados):
 def analisar_tipo_servico(dados):
     st.subheader("🔧 Análise por Tipo de Serviço")
     
-    tipo_servico = dados.groupby('TIPO DE SERVIÇO').agg({
+    tipo_servico = dados.groupby('TIPO DE SERVIÇO', observed=True).agg({
         'CONTRATO': 'count',
         'VALOR EMPRESA': ['sum', 'mean'],
         'TEMPO_MINUTOS': 'mean'
@@ -220,7 +220,7 @@ def analisar_horarios(dados):
     
     with col1:
         # Análise por hora do dia
-        prod_horario = dados.groupby('HORA').agg({
+        prod_horario = dados.groupby('HORA', observed=True).agg({
             'CONTRATO': 'count',
             'VALOR EMPRESA': 'sum',
             'STATUS': lambda x: (x == 'Executado').mean() * 100
@@ -302,7 +302,7 @@ def analisar_eficiencia_tecnicos(dados):
     st.subheader("👨‍🔧 Análise de Eficiência dos Técnicos")
     
     # Calcula métricas por técnico
-    eficiencia = dados.groupby('TECNICO').agg({
+    eficiencia = dados.groupby('TECNICO', observed=True).agg({
         'CONTRATO': 'count',
         'VALOR EMPRESA': ['sum', 'mean'],
         'TEMPO_MINUTOS': 'mean',

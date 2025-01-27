@@ -25,16 +25,19 @@ def prever_demanda(dados):
     st.subheader("🔮 Previsão de Demanda")
     
     try:
-        # Agrupa por data e conta serviços (com observed=True)
-        demanda_diaria = dados.groupby('DATA_TOA', observed=True)['CONTRATO'].count().reset_index()
-        demanda_diaria.set_index('DATA_TOA', inplace=True)
+        # Agrupa por data e conta serviços
+        demanda_diaria = dados.groupby('DATA_TOA', observed=True)['CONTRATO'].count()
         
-        # Treina modelo
+        # Define frequência explicitamente
+        demanda_diaria = demanda_diaria.asfreq('D', fill_value=0)
+        
+        # Treina modelo com frequência explícita
         model = ExponentialSmoothing(
-            demanda_diaria['CONTRATO'],
+            demanda_diaria,
             seasonal_periods=7,
             trend='add',
-            seasonal='add'
+            seasonal='add',
+            freq='D'  # Especifica frequência diária
         )
         
         with st.spinner('Treinando modelo de previsão...'):
