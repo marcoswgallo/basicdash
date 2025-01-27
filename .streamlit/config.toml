@@ -8,8 +8,7 @@ textColor="#FAFAFA"
 gatherUsageStats = false
 
 [server]
-enableStaticServing = true
+enableStaticServing = false
 
 [client]
-showSidebarNavigation = true
 toolbarMode = "minimal" 
