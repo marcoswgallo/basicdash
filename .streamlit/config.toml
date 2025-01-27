@@ -9,6 +9,18 @@ gatherUsageStats = false
 
 [server]
 enableStaticServing = false
+port = 8501
+address = "localhost"
+maxUploadSize = 200
+enableXsrfProtection = true
+enableCORS = false
+maxMessageSize = 200
 
 [client]
-toolbarMode = "minimal" 
+toolbarMode = "minimal"
+
+[runner]
+fastReruns = true
+
+[logger]
+level = "info" 
