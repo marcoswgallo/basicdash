@@ -50,7 +50,7 @@ def prever_demanda(dados):
             forecast_df = pd.DataFrame({
                 'ds': forecast.index,
                 'yhat': forecast.values,
-                'yhat_lower': forecast.values * 0.9,  # 90% intervalo de confiança
+                'yhat_lower': forecast.values * 0.9,
                 'yhat_upper': forecast.values * 1.1
             })
         
@@ -75,13 +75,18 @@ def prever_demanda(dados):
         
         with col2:
             # Análise semanal
-            demanda_diaria['dia_semana'] = demanda_diaria.index.day_name()
-            media_semanal = demanda_diaria.groupby('dia_semana')['CONTRATO'].mean()
+            dados_semanais = pd.DataFrame(demanda_diaria)
+            dados_semanais['dia_semana'] = dados_semanais.index.day_name()
+            media_semanal = dados_semanais.groupby('dia_semana', observed=True)[0].mean()
+            
+            # Ordena os dias da semana
+            ordem_dias = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            media_semanal = media_semanal.reindex(ordem_dias)
             
             fig = px.bar(
                 media_semanal,
                 title='Média de Serviços por Dia da Semana',
-                labels={'value': 'Média de Serviços'}
+                labels={'value': 'Média de Serviços', 'dia_semana': 'Dia da Semana'}
             )
             st.plotly_chart(fig, use_container_width=True)
         
@@ -91,7 +96,7 @@ def prever_demanda(dados):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            media_atual = demanda_diaria['CONTRATO'].mean()
+            media_atual = demanda_diaria.mean()
             media_prevista = forecast.mean()
             variacao = ((media_prevista - media_atual) / media_atual) * 100
             
