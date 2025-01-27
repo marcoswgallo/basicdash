@@ -301,7 +301,7 @@ def analisar_horarios(dados):
 def analisar_eficiencia_tecnicos(dados):
     st.subheader("👨‍🔧 Análise de Eficiência dos Técnicos")
     
-    # Calcula métricas por técnico
+    # Calcula métricas por técnico (adicionado observed=True)
     eficiencia = dados.groupby('TECNICO', observed=True).agg({
         'CONTRATO': 'count',
         'VALOR EMPRESA': ['sum', 'mean'],
