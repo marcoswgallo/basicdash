@@ -8,6 +8,10 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 from datetime import timedelta
+import warnings
+
+# Filtra os avisos específicos do pandas sobre observed
+warnings.filterwarnings('ignore', category=FutureWarning, message='.*observed=False.*')
 
 def verificar_dados(dados):
     """Verifica se os dados têm as colunas necessárias"""

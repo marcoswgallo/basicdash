@@ -5,6 +5,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_app import DashboardTecnicos, load_css
 from datetime import datetime, timedelta, date
+import warnings
+
+# Filtra os avisos específicos do pandas sobre observed
+warnings.filterwarnings('ignore', category=FutureWarning, message='.*observed=False.*')
 
 def analisar_tempo_execucao(dados):
     st.subheader("⏱️ Análise de Tempo de Execução")

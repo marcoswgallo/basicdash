@@ -5,6 +5,10 @@ import plotly.graph_objects as go
 from datetime import datetime
 import os
 import gc
+import warnings
+
+# Filtra os avisos específicos do pandas sobre observed
+warnings.filterwarnings('ignore', category=FutureWarning, message='.*observed=False.*')
 
 # Adicione esta constante no início do arquivo, após os imports
 GRUPOS_BASES = {
@@ -526,7 +530,7 @@ class DashboardTecnicos:
                     st.metric("Valor Total Empresa", f"R$ {dados_filtrados['VALOR EMPRESA'].sum():,.2f}")
             else:
                 # Para todas as bases, mostra o gráfico por base
-                valores_base = dados_filtrados.groupby('BASE').agg({
+                valores_base = dados_filtrados.groupby('BASE', observed=True).agg({
                     'VALOR TÉCNICO': 'sum',
                     'VALOR EMPRESA': 'sum'
                 }).reset_index()

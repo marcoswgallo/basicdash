@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from streamlit_app import DashboardTecnicos, load_css
+import warnings
+
+# Filtra os avisos específicos do pandas sobre observed
+warnings.filterwarnings('ignore', category=FutureWarning, message='.*observed=False.*')
 
 def analise_inteligente(dados):
     """Gera insights automáticos dos dados"""
