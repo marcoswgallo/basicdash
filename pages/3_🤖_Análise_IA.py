@@ -2,25 +2,44 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import sys
+import traceback
 
-# Verifica e importa dependências com tratamento de erro
+# Configuração inicial
+st.set_page_config(page_title="Análise IA", layout="wide")
+
+# Debug mode
+DEBUG = True
+
+def log_debug(message):
+    if DEBUG:
+        st.write(f"DEBUG: {message}")
+
 try:
+    log_debug("Importando statsmodels...")
     from statsmodels.tsa.holtwinters import ExponentialSmoothing
     FORECAST_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     FORECAST_AVAILABLE = False
-    st.warning("📦 Biblioteca statsmodels não encontrada. Para usar previsão de demanda, instale com: pip install statsmodels")
+    st.warning(f"📦 Erro ao importar statsmodels: {str(e)}")
 
 try:
+    log_debug("Importando scikit-learn...")
     from sklearn.cluster import KMeans
     from sklearn.preprocessing import StandardScaler
     from sklearn.ensemble import IsolationForest
     SKLEARN_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     SKLEARN_AVAILABLE = False
-    st.warning("📦 Biblioteca scikit-learn não encontrada. Para usar análises avançadas, instale com: pip install scikit-learn")
+    st.warning(f"📦 Erro ao importar scikit-learn: {str(e)}")
 
-from streamlit_app import DashboardTecnicos
+try:
+    log_debug("Importando DashboardTecnicos...")
+    from streamlit_app import DashboardTecnicos
+except ImportError as e:
+    st.error(f"Erro ao importar DashboardTecnicos: {str(e)}")
+    sys.exit(1)
+
 from datetime import timedelta
 
 def verificar_dados(dados):
@@ -315,82 +334,77 @@ def gerar_recomendacoes(dados):
         st.error(f"Erro ao gerar recomendações: {str(e)}")
 
 def main():
-    st.set_page_config(page_title="Análise IA", layout="wide")
-    
     st.title("🤖 Análise com Inteligência Artificial")
     
-    # Verifica dependências
-    if not FORECAST_AVAILABLE or not SKLEARN_AVAILABLE:
-        st.error("⚠️ Algumas dependências estão faltando. Por favor, instale as bibliotecas necessárias:")
-        st.code("pip install statsmodels scikit-learn")
-        return
-    
-    dashboard = DashboardTecnicos()
-    arquivos = dashboard.listar_arquivos()
-    
-    if not arquivos:
-        st.error("❌ Nenhum arquivo encontrado")
-        return
+    try:
+        log_debug("Iniciando aplicação...")
         
-    arquivo = arquivos[0]
-    
-    if dashboard.carregar_dados(arquivo):
-        try:
+        # Verifica dependências
+        if not FORECAST_AVAILABLE or not SKLEARN_AVAILABLE:
+            st.error("⚠️ Algumas dependências estão faltando.")
+            st.write("Status das dependências:")
+            st.write(f"- statsmodels: {'✅' if FORECAST_AVAILABLE else '❌'}")
+            st.write(f"- scikit-learn: {'✅' if SKLEARN_AVAILABLE else '❌'}")
+            return
+        
+        log_debug("Carregando dashboard...")
+        dashboard = DashboardTecnicos()
+        
+        log_debug("Listando arquivos...")
+        arquivos = dashboard.listar_arquivos()
+        
+        if not arquivos:
+            st.error("❌ Nenhum arquivo encontrado")
+            return
+        
+        arquivo = arquivos[0]
+        log_debug(f"Arquivo selecionado: {arquivo}")
+        
+        if dashboard.carregar_dados(arquivo):
+            log_debug("Dados carregados com sucesso")
             dados = dashboard.dados.copy()
             
-            # Verifica se os dados têm as colunas necessárias
-            if not verificar_dados(dados):
-                return
+            # Mostra informações básicas dos dados
+            st.write("### Informações dos Dados")
+            st.write(f"Total de registros: {len(dados)}")
+            st.write("Colunas disponíveis:", ", ".join(dados.columns))
             
-            # Converte datas
-            dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
+            # Menu simplificado inicialmente
+            opcoes = ["Visualizar Dados", "Análise Básica"]
+            if FORECAST_AVAILABLE:
+                opcoes.append("Previsão de Demanda")
+            if SKLEARN_AVAILABLE:
+                opcoes.extend(["Clusters", "Anomalias"])
             
-            # Adiciona coluna de hora
-            dados['HORA'] = dados['DATA_TOA'].dt.hour
+            analise = st.sidebar.selectbox("Escolha a Análise", opcoes)
             
-            # Garante que valores monetários sejam numéricos
-            dados['VALOR EMPRESA'] = pd.to_numeric(
-                dados['VALOR EMPRESA'].astype(str)
-                .str.replace('R$', '')
-                .str.replace('.', '')
-                .str.replace(',', '.'),
-                errors='coerce'
-            )
-            
-            # Menu de análises
-            analise = st.sidebar.selectbox(
-                "Escolha a Análise",
-                ["Previsão de Demanda", 
-                 "Clusters de Performance",
-                 "Detecção de Anomalias",
-                 "Recomendações"]
-            )
-            
-            # Mostra dados disponíveis
-            with st.expander("📊 Dados Disponíveis"):
-                st.write("Período:", dados['DATA_TOA'].min().date(), "a", dados['DATA_TOA'].max().date())
-                st.write("Total de registros:", len(dados))
-                st.write("Técnicos:", dados['TECNICO'].nunique())
+            if analise == "Visualizar Dados":
+                st.write("### Dados Brutos")
                 st.dataframe(dados.head())
-            
-            # Executa análise selecionada
-            if analise == "Previsão de Demanda":
+            elif analise == "Análise Básica":
+                st.write("### Análise Básica")
+                st.write("Total de registros:", len(dados))
+                st.write("Número de técnicos:", dados['TECNICO'].nunique())
+            elif analise == "Previsão de Demanda":
                 prever_demanda(dados)
-            elif analise == "Clusters de Performance":
+            elif analise == "Clusters":
                 analisar_clusters_tecnicos(dados)
-            elif analise == "Detecção de Anomalias":
+            elif analise == "Anomalias":
                 detectar_anomalias(dados)
             else:
                 gerar_recomendacoes(dados)
                 
-        except Exception as e:
-            st.error(f"❌ Erro ao processar dados: {str(e)}")
-            st.error("Colunas disponíveis: " + ", ".join(dados.columns))
-            st.error("Por favor, verifique o formato dos dados e as dependências necessárias")
-            
-            # Mostra mais detalhes do erro em modo debug
-            if st.checkbox("Mostrar detalhes do erro"):
-                st.exception(e)
+    except Exception as e:
+        st.error("❌ Erro crítico no aplicativo")
+        st.error(str(e))
+        if DEBUG:
+            st.code(traceback.format_exc())
 
 if __name__ == "__main__":
-    main() 
+    try:
+        main()
+    except Exception as e:
+        st.error("❌ Erro fatal no aplicativo")
+        st.error(str(e))
+        if DEBUG:
+            st.code(traceback.format_exc()) 
