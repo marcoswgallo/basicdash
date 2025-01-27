@@ -58,8 +58,8 @@ def prever_demanda(dados):
     st.subheader("🔮 Previsão de Demanda")
     
     try:
-        # Agrupa por data e conta serviços
-        demanda_diaria = dados.groupby('DATA_TOA')['CONTRATO'].count().reset_index()
+        # Agrupa por data e conta serviços (com observed=True)
+        demanda_diaria = dados.groupby('DATA_TOA', observed=True)['CONTRATO'].count().reset_index()
         demanda_diaria.set_index('DATA_TOA', inplace=True)
         
         # Treina modelo
@@ -281,13 +281,13 @@ def gerar_recomendacoes(dados):
         # Análise de padrões de sucesso
         dados_sucesso = dados[dados['STATUS'] == 'Executado']
         
-        # Melhores horários
-        melhores_horarios = dados_sucesso.groupby('HORA')['CONTRATO'].count()
+        # Melhores horários (com observed=True)
+        melhores_horarios = dados_sucesso.groupby('HORA', observed=True)['CONTRATO'].count()
         pior_horario = melhores_horarios.idxmin()
         melhor_horario = melhores_horarios.idxmax()
         
-        # Melhores técnicos
-        melhores_tecnicos = dados_sucesso.groupby('TECNICO').agg({
+        # Melhores técnicos (com observed=True)
+        melhores_tecnicos = dados_sucesso.groupby('TECNICO', observed=True).agg({
             'CONTRATO': 'count',
             'VALOR EMPRESA': 'mean',
             'TEMPO_MINUTOS': 'mean'
