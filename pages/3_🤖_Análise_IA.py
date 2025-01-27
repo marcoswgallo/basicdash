@@ -77,6 +77,7 @@ def prever_demanda(dados):
             try:
                 # Análise semanal
                 dados_semanais = pd.DataFrame(demanda_diaria)
+                dados_semanais.columns = ['quantidade']  # Renomeia a coluna para um nome conhecido
                 dados_semanais['dia_semana'] = dados_semanais.index.day_name()
                 
                 # Dicionário para tradução dos dias
@@ -93,8 +94,8 @@ def prever_demanda(dados):
                 # Traduz os dias da semana
                 dados_semanais['dia_semana'] = dados_semanais['dia_semana'].map(dias_semana)
                 
-                # Calcula média por dia da semana
-                media_semanal = dados_semanais.groupby('dia_semana', observed=True)[0].mean()
+                # Calcula média por dia da semana usando o nome correto da coluna
+                media_semanal = dados_semanais.groupby('dia_semana', observed=True)['quantidade'].mean()
                 
                 # Ordena os dias da semana em português
                 ordem_dias = [
@@ -131,6 +132,7 @@ def prever_demanda(dados):
                 st.plotly_chart(fig, use_container_width=True)
             except Exception as e:
                 st.error(f"Erro na análise semanal: {str(e)}")
+                st.error("Dados disponíveis:", dados_semanais.columns.tolist())
         
         # Métricas de previsão
         st.write("### Métricas de Previsão")

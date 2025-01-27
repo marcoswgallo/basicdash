@@ -315,7 +315,7 @@ class DashboardTecnicos:
             dados_filtrados = self.dados[mask_periodo & mask_grupo & mask_base & mask_status]
             
             # Remove bases com valores zerados
-            dados_agrupados = dados_filtrados.groupby('BASE').agg({
+            dados_agrupados = dados_filtrados.groupby('BASE', observed=True).agg({
                 'CONTRATO': 'count',
                 'VALOR EMPRESA': 'sum'
             }).reset_index()
@@ -419,7 +419,7 @@ class DashboardTecnicos:
                 
                 # Agrupa por técnico apenas os dados da base selecionada
                 prod_tecnico = (tecnicos_da_base
-                    .groupby('TECNICO')
+                    .groupby('TECNICO', observed=True)
                     .agg({
                         'CONTRATO': 'nunique',
                         'VALOR TÉCNICO': 'sum',
@@ -569,7 +569,7 @@ class DashboardTecnicos:
                 dados_filtrados = dados_filtrados[dados_filtrados['GRUPO'] == grupo_selecionado]
 
             # Remove bases com valores zerados
-            dados_agrupados = dados_filtrados.groupby('BASE').agg({
+            dados_agrupados = dados_filtrados.groupby('BASE', observed=True).agg({
                 'VALOR EMPRESA': 'sum',
                 'CONTRATO': 'count',
                 'TECNICO': 'nunique'
