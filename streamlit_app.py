@@ -822,6 +822,56 @@ def load_css():
     with open('style.css') as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
+def preparar_dados(dados):
+    """Prepara os dados para análise, criando colunas calculadas"""
+    try:
+        dados = dados.copy()
+        
+        # Converte datas
+        if 'DATA_TOA' in dados.columns:
+            dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
+        
+        # Garante que valores monetários sejam numéricos
+        for col in ['VALOR TÉCNICO', 'VALOR EMPRESA']:
+            if col in dados.columns:
+                dados[col] = pd.to_numeric(
+                    dados[col].astype(str)
+                    .str.replace('R$', '')
+                    .str.replace('.', '')
+                    .str.replace(',', '.'),
+                    errors='coerce'
+                )
+        
+        # Calcula métricas adicionais
+        if 'TEMPO_MINUTOS' not in dados.columns:
+            # Calcula tempo médio por tipo de serviço
+            tempo_medio_servico = {
+                'ADESAO DE ASSINATURA': 90,
+                'MUDANCA DE ENDERECO': 120,
+                'VISITA TECNICA': 60,
+                'SERVICOS': 45,
+                'MUDANCA DE PACOTE': 30
+            }
+            
+            # Aplica tempo médio baseado no tipo de serviço
+            dados['TEMPO_MINUTOS'] = dados['TIPO DE SERVIÇO'].map(
+                lambda x: tempo_medio_servico.get(x, 60)
+            )
+            
+            st.info("Usando tempos médios estimados por tipo de serviço")
+        
+        # Adiciona outras métricas úteis
+        dados['VALOR_POR_MINUTO'] = dados['VALOR EMPRESA'] / dados['TEMPO_MINUTOS']
+        dados['MES'] = dados['DATA_TOA'].dt.month
+        dados['DIA_SEMANA'] = dados['DATA_TOA'].dt.day_name()
+        
+        return dados
+    
+    except Exception as e:
+        st.error(f"Erro ao preparar dados: {str(e)}")
+        st.error(f"Colunas disponíveis: {', '.join(dados.columns)}")
+        raise e
+
 def main():
     st.set_page_config(
         page_title="Dashboard de Produtividade",
@@ -884,7 +934,7 @@ def main():
                     
                 except Exception as e:
                     st.error(f"Erro ao processar os dados: {str(e)}")
-                    if dados is not None:
+                    if 'dados' in locals():  # Verifica se 'dados' foi definido
                         st.error(f"Colunas disponíveis: {', '.join(dados.columns)}")
                     st.error("Por favor, verifique o formato dos dados")
 
