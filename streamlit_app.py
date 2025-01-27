@@ -663,11 +663,11 @@ class DashboardTecnicos:
                     if len(desconexao) > 0:
                         # Calcula métricas adicionais
                         desconexao['VL EQ'] = desconexao.apply(
-                            lambda x: x['VALOR EMPRESA'] / x['TECNICO'] if x['TECNICO'] > 0 else 0,
+                            lambda x: round(x['VALOR EMPRESA'] / x['TECNICO'], 2) if x['TECNICO'] > 0 else 0,
                             axis=1
                         )
                         desconexao['EQ_CTTS'] = desconexao.apply(
-                            lambda x: (x['CONTRATO'] / x['TECNICO']).round(1) if x['TECNICO'] > 0 else 0,
+                            lambda x: round(x['CONTRATO'] / x['TECNICO'], 1) if x['TECNICO'] > 0 else 0,
                             axis=1
                         )
 
@@ -677,8 +677,8 @@ class DashboardTecnicos:
                             'VALOR EMPRESA': [desconexao['VALOR EMPRESA'].sum()],
                             'CONTRATO': [desconexao['CONTRATO'].sum()],
                             'TECNICO': [desconexao['TECNICO'].sum()],
-                            'VL EQ': [desconexao['VALOR EMPRESA'].sum() / desconexao['TECNICO'].sum() if desconexao['TECNICO'].sum() > 0 else 0],
-                            'EQ_CTTS': [(desconexao['CONTRATO'].sum() / desconexao['TECNICO'].sum()).round(1) if desconexao['TECNICO'].sum() > 0 else 0]
+                            'VL EQ': [round(desconexao['VALOR EMPRESA'].sum() / desconexao['TECNICO'].sum(), 2) if desconexao['TECNICO'].sum() > 0 else 0],
+                            'EQ_CTTS': [round(desconexao['CONTRATO'].sum() / desconexao['TECNICO'].sum(), 1) if desconexao['TECNICO'].sum() > 0 else 0]
                         })
 
                         desconexao = pd.concat([desconexao, total_desc], ignore_index=True)
