@@ -589,13 +589,13 @@ class DashboardTecnicos:
 
             # Calcula VL EQ (Valor por Equipe)
             dados_agrupados['VL EQ'] = dados_agrupados.apply(
-                lambda x: x['VALOR EMPRESA'] / x['TECNICO'] if x['TECNICO'] > 0 else 0, 
+                lambda x: round(x['VALOR EMPRESA'] / x['TECNICO'], 2) if x['TECNICO'] > 0 else 0, 
                 axis=1
             )
             
             # Calcula EQ_CTTS (Contratos por Equipe)
             dados_agrupados['EQ_CTTS'] = dados_agrupados.apply(
-                lambda x: (x['CONTRATO'] / x['TECNICO']).round(1) if x['TECNICO'] > 0 else 0,
+                lambda x: round(x['CONTRATO'] / x['TECNICO'], 1) if x['TECNICO'] > 0 else 0,
                 axis=1
             )
 
@@ -611,8 +611,8 @@ class DashboardTecnicos:
                 'VALOR': [dados_agrupados['VALOR'].sum()],
                 'CONTRATOS': [dados_agrupados['CONTRATOS'].sum()],
                 'EQUIPES': [dados_agrupados['EQUIPES'].sum()],
-                'VL EQ': [dados_agrupados['VALOR'].sum() / dados_agrupados['EQUIPES'].sum() if dados_agrupados['EQUIPES'].sum() > 0 else 0],
-                'EQ_CTTS': [(dados_agrupados['CONTRATOS'].sum() / dados_agrupados['EQUIPES'].sum()).round(1) if dados_agrupados['EQUIPES'].sum() > 0 else 0]
+                'VL EQ': [round(dados_agrupados['VALOR'].sum() / dados_agrupados['EQUIPES'].sum(), 2) if dados_agrupados['EQUIPES'].sum() > 0 else 0],
+                'EQ_CTTS': [round(dados_agrupados['CONTRATOS'].sum() / dados_agrupados['EQUIPES'].sum(), 1) if dados_agrupados['EQUIPES'].sum() > 0 else 0]
             })
 
             # Concatena e reseta o índice
