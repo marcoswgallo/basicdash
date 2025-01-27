@@ -2,12 +2,37 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+
+# Verifica e importa dependências com tratamento de erro
+try:
+    from statsmodels.tsa.holtwinters import ExponentialSmoothing
+    FORECAST_AVAILABLE = True
+except ImportError:
+    FORECAST_AVAILABLE = False
+    st.warning("📦 Biblioteca statsmodels não encontrada. Para usar previsão de demanda, instale com: pip install statsmodels")
+
+try:
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.ensemble import IsolationForest
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    st.warning("📦 Biblioteca scikit-learn não encontrada. Para usar análises avançadas, instale com: pip install scikit-learn")
+
 from streamlit_app import DashboardTecnicos
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import IsolationForest
-from prophet import Prophet
 from datetime import timedelta
+
+def verificar_dados(dados):
+    """Verifica se os dados têm as colunas necessárias"""
+    colunas_necessarias = ['DATA_TOA', 'CONTRATO', 'VALOR EMPRESA', 'TEMPO_MINUTOS', 'STATUS', 'TECNICO']
+    colunas_faltantes = [col for col in colunas_necessarias if col not in dados.columns]
+    
+    if colunas_faltantes:
+        st.error(f"❌ Colunas faltantes: {', '.join(colunas_faltantes)}")
+        st.write("Colunas disponíveis:", ', '.join(dados.columns))
+        return False
+    return True
 
 def prever_demanda(dados):
     """Prevê a demanda futura de serviços usando séries temporais"""
@@ -16,18 +41,29 @@ def prever_demanda(dados):
     try:
         # Agrupa por data e conta serviços
         demanda_diaria = dados.groupby('DATA_TOA')['CONTRATO'].count().reset_index()
+        demanda_diaria.set_index('DATA_TOA', inplace=True)
         
-        # Prepara dados para o Prophet
-        df_prophet = demanda_diaria.rename(columns={'DATA_TOA': 'ds', 'CONTRATO': 'y'})
+        # Treina modelo
+        model = ExponentialSmoothing(
+            demanda_diaria['CONTRATO'],
+            seasonal_periods=7,
+            trend='add',
+            seasonal='add'
+        )
         
         with st.spinner('Treinando modelo de previsão...'):
-            # Treina modelo
-            model = Prophet(daily_seasonality=True)
-            model.fit(df_prophet)
+            fit = model.fit()
             
             # Faz previsão para próximos 30 dias
-            future = model.make_future_dataframe(periods=30)
-            forecast = model.predict(future)
+            forecast = fit.forecast(30)
+            
+            # Calcula intervalos de confiança
+            forecast_df = pd.DataFrame({
+                'ds': forecast.index,
+                'yhat': forecast.values,
+                'yhat_lower': forecast.values * 0.9,  # 90% intervalo de confiança
+                'yhat_upper': forecast.values * 1.1
+            })
         
         # Plota resultados
         col1, col2 = st.columns(2)
@@ -35,7 +71,7 @@ def prever_demanda(dados):
         with col1:
             # Gráfico de previsão
             fig = px.line(
-                forecast, 
+                forecast_df, 
                 x='ds', 
                 y=['yhat', 'yhat_lower', 'yhat_upper'],
                 title='Previsão de Demanda - Próximos 30 dias',
@@ -49,9 +85,16 @@ def prever_demanda(dados):
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
-            # Componentes da previsão
-            fig = model.plot_components(forecast)
-            st.pyplot(fig)
+            # Análise semanal
+            demanda_diaria['dia_semana'] = demanda_diaria.index.day_name()
+            media_semanal = demanda_diaria.groupby('dia_semana')['CONTRATO'].mean()
+            
+            fig = px.bar(
+                media_semanal,
+                title='Média de Serviços por Dia da Semana',
+                labels={'value': 'Média de Serviços'}
+            )
+            st.plotly_chart(fig, use_container_width=True)
         
         # Métricas de previsão
         st.write("### Métricas de Previsão")
@@ -59,8 +102,8 @@ def prever_demanda(dados):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            media_atual = df_prophet['y'].mean()
-            media_prevista = forecast['yhat'].tail(30).mean()
+            media_atual = demanda_diaria['CONTRATO'].mean()
+            media_prevista = forecast.mean()
             variacao = ((media_prevista - media_atual) / media_atual) * 100
             
             st.metric(
@@ -72,15 +115,15 @@ def prever_demanda(dados):
         with col2:
             st.metric(
                 "Pico Previsto",
-                f"{forecast['yhat'].max():.1f}",
-                f"Data: {forecast.loc[forecast['yhat'].idxmax(), 'ds'].strftime('%d/%m/%Y')}"
+                f"{forecast.max():.1f}",
+                f"Data: {forecast.idxmax().strftime('%d/%m/%Y')}"
             )
         
         with col3:
             st.metric(
                 "Vale Previsto",
-                f"{forecast['yhat'].min():.1f}",
-                f"Data: {forecast.loc[forecast['yhat'].idxmin(), 'ds'].strftime('%d/%m/%Y')}"
+                f"{forecast.min():.1f}",
+                f"Data: {forecast.idxmin().strftime('%d/%m/%Y')}"
             )
             
     except Exception as e:
@@ -276,11 +319,17 @@ def main():
     
     st.title("🤖 Análise com Inteligência Artificial")
     
+    # Verifica dependências
+    if not FORECAST_AVAILABLE or not SKLEARN_AVAILABLE:
+        st.error("⚠️ Algumas dependências estão faltando. Por favor, instale as bibliotecas necessárias:")
+        st.code("pip install statsmodels scikit-learn")
+        return
+    
     dashboard = DashboardTecnicos()
     arquivos = dashboard.listar_arquivos()
     
     if not arquivos:
-        st.error("Nenhum arquivo encontrado")
+        st.error("❌ Nenhum arquivo encontrado")
         return
         
     arquivo = arquivos[0]
@@ -289,11 +338,24 @@ def main():
         try:
             dados = dashboard.dados.copy()
             
+            # Verifica se os dados têm as colunas necessárias
+            if not verificar_dados(dados):
+                return
+            
             # Converte datas
             dados['DATA_TOA'] = pd.to_datetime(dados['DATA_TOA'])
             
             # Adiciona coluna de hora
             dados['HORA'] = dados['DATA_TOA'].dt.hour
+            
+            # Garante que valores monetários sejam numéricos
+            dados['VALOR EMPRESA'] = pd.to_numeric(
+                dados['VALOR EMPRESA'].astype(str)
+                .str.replace('R$', '')
+                .str.replace('.', '')
+                .str.replace(',', '.'),
+                errors='coerce'
+            )
             
             # Menu de análises
             analise = st.sidebar.selectbox(
@@ -304,6 +366,14 @@ def main():
                  "Recomendações"]
             )
             
+            # Mostra dados disponíveis
+            with st.expander("📊 Dados Disponíveis"):
+                st.write("Período:", dados['DATA_TOA'].min().date(), "a", dados['DATA_TOA'].max().date())
+                st.write("Total de registros:", len(dados))
+                st.write("Técnicos:", dados['TECNICO'].nunique())
+                st.dataframe(dados.head())
+            
+            # Executa análise selecionada
             if analise == "Previsão de Demanda":
                 prever_demanda(dados)
             elif analise == "Clusters de Performance":
@@ -314,8 +384,13 @@ def main():
                 gerar_recomendacoes(dados)
                 
         except Exception as e:
-            st.error(f"Erro ao processar dados: {str(e)}")
-            st.error(f"Colunas disponíveis: {', '.join(dados.columns)}")
+            st.error(f"❌ Erro ao processar dados: {str(e)}")
+            st.error("Colunas disponíveis: " + ", ".join(dados.columns))
+            st.error("Por favor, verifique o formato dos dados e as dependências necessárias")
+            
+            # Mostra mais detalhes do erro em modo debug
+            if st.checkbox("Mostrar detalhes do erro"):
+                st.exception(e)
 
 if __name__ == "__main__":
     main() 
