@@ -6,6 +6,8 @@ from datetime import datetime
 import os
 import gc
 import warnings
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 
 # Filtra os avisos específicos do pandas sobre observed
 warnings.filterwarnings('ignore', category=FutureWarning, message='.*observed=False.*')
@@ -821,6 +823,71 @@ class DashboardTecnicos:
 def load_css():
     with open('style.css') as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+def analisar_clusters_tecnicos(dados):
+    """Agrupa técnicos em clusters por performance"""
+    st.subheader("🎯 Análise de Clusters de Performance")
+    
+    try:
+        # Prepara dados dos técnicos
+        metricas_tecnicos = dados.groupby('TECNICO', observed=True).agg({
+            'CONTRATO': 'count',
+            'VALOR EMPRESA': 'mean',
+            'TEMPO_MINUTOS': 'mean',
+            'STATUS': lambda x: (x == 'Executado').mean() * 100
+        }).reset_index()
+        
+        # Seleciona features para clustering
+        features = ['CONTRATO', 'VALOR EMPRESA', 'TEMPO_MINUTOS', 'STATUS']
+        X = metricas_tecnicos[features].values
+        
+        # Normaliza dados
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        
+        # Aplica K-means com número ideal de clusters
+        n_clusters = 3  # Pode ser ajustado baseado no elbow plot
+        kmeans = KMeans(n_clusters=n_clusters)
+        clusters = kmeans.fit_predict(X_scaled)
+        
+        # Adiciona clusters ao dataframe
+        metricas_tecnicos['CLUSTER'] = clusters
+        
+        # Visualizações
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Scatter plot 3D
+            fig = px.scatter_3d(
+                metricas_tecnicos,
+                x='CONTRATO',
+                y='VALOR EMPRESA',
+                z='TEMPO_MINUTOS',
+                color='CLUSTER',
+                hover_data=['TECNICO'],
+                title='Clusters de Técnicos - Visualização 3D'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Características dos clusters
+            for i in range(n_clusters):
+                st.write(f"### Cluster {i}")
+                cluster_data = metricas_tecnicos[metricas_tecnicos['CLUSTER'] == i]
+                
+                st.write(f"Quantidade de técnicos: {len(cluster_data)}")
+                st.write(f"Média de contratos: {cluster_data['CONTRATO'].mean():.1f}")
+                st.write(f"Taxa média de sucesso: {cluster_data['STATUS'].mean():.1f}%")
+                
+        # Lista técnicos por cluster
+        st.write("### Detalhamento dos Clusters")
+        for i in range(n_clusters):
+            with st.expander(f"Cluster {i}"):
+                cluster_data = metricas_tecnicos[metricas_tecnicos['CLUSTER'] == i]
+                st.dataframe(cluster_data)
+                
+    except Exception as e:
+        st.error(f"Erro na análise de clusters: {str(e)}")
 
 def preparar_dados(dados):
     """Prepara os dados para análise, criando colunas calculadas"""
