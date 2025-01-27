@@ -74,21 +74,63 @@ def prever_demanda(dados):
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
-            # Análise semanal
-            dados_semanais = pd.DataFrame(demanda_diaria)
-            dados_semanais['dia_semana'] = dados_semanais.index.day_name()
-            media_semanal = dados_semanais.groupby('dia_semana', observed=True)[0].mean()
-            
-            # Ordena os dias da semana
-            ordem_dias = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-            media_semanal = media_semanal.reindex(ordem_dias)
-            
-            fig = px.bar(
-                media_semanal,
-                title='Média de Serviços por Dia da Semana',
-                labels={'value': 'Média de Serviços', 'dia_semana': 'Dia da Semana'}
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            try:
+                # Análise semanal
+                dados_semanais = pd.DataFrame(demanda_diaria)
+                dados_semanais['dia_semana'] = dados_semanais.index.day_name()
+                
+                # Dicionário para tradução dos dias
+                dias_semana = {
+                    'Monday': 'Segunda-feira',
+                    'Tuesday': 'Terça-feira',
+                    'Wednesday': 'Quarta-feira',
+                    'Thursday': 'Quinta-feira',
+                    'Friday': 'Sexta-feira',
+                    'Saturday': 'Sábado',
+                    'Sunday': 'Domingo'
+                }
+                
+                # Traduz os dias da semana
+                dados_semanais['dia_semana'] = dados_semanais['dia_semana'].map(dias_semana)
+                
+                # Calcula média por dia da semana
+                media_semanal = dados_semanais.groupby('dia_semana', observed=True)[0].mean()
+                
+                # Ordena os dias da semana em português
+                ordem_dias = [
+                    'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+                    'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'
+                ]
+                
+                # Garante que todos os dias estejam presentes com valor 0 se não houver dados
+                for dia in ordem_dias:
+                    if dia not in media_semanal.index:
+                        media_semanal[dia] = 0
+                
+                media_semanal = media_semanal.reindex(ordem_dias)
+                
+                # Cria DataFrame para o gráfico
+                df_plot = pd.DataFrame({
+                    'Dia da Semana': media_semanal.index,
+                    'Média de Serviços': media_semanal.values
+                })
+                
+                fig = px.bar(
+                    df_plot,
+                    x='Dia da Semana',
+                    y='Média de Serviços',
+                    title='Média de Serviços por Dia da Semana'
+                )
+                
+                # Ajusta layout para melhor visualização
+                fig.update_layout(
+                    xaxis_tickangle=-45,
+                    height=400
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                st.error(f"Erro na análise semanal: {str(e)}")
         
         # Métricas de previsão
         st.write("### Métricas de Previsão")
@@ -122,6 +164,7 @@ def prever_demanda(dados):
             
     except Exception as e:
         st.error(f"Erro ao gerar previsão: {str(e)}")
+        st.error("Detalhes do erro:", e)
 
 def analisar_clusters_tecnicos(dados):
     """Agrupa técnicos em clusters por performance"""
